@@ -1,6 +1,7 @@
 local os = require "os"
 local io = require "io"
 require "parse"
+require "error"
 
 if not arg[1] then
   print("error: no input file");
