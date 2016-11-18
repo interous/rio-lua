@@ -3,7 +3,7 @@ local io = require "io"
 require "parse"
 require "error"
 
-backend = "cs"
+backend = "c"
 
 if not arg[1] then
   print("error: no input file")
@@ -28,11 +28,44 @@ function rio_close()
   filestack.n = filestack.n - 1
 end
 
+function rio_tohex(n)
+  local res = {}
+  while n > 0 do
+    local d = n % 16
+    if d < 10 then table.insert(res, tostring(d))
+    elseif d == 10 then table.insert(res, "A")
+    elseif d == 11 then table.insert(res, "B")
+    elseif d == 12 then table.insert(res, "C")
+    elseif d == 13 then table.insert(res, "D")
+    elseif d == 14 then table.insert(res, "E")
+    else table.insert(res, "F")
+    end
+    n = math.floor(n / 16)
+  end
+  return string.reverse(table.concat(res, ""))
+end
+
+function rio_sanitize(str)
+  local res = {}
+  for i=1,string.len(str) do
+    local c = string.byte(str, i)
+    if (c >= 48 and c < 58) or (c >= 65 and c < 91) or
+        (c >= 97 and c < 123) then
+      table.insert(res, string.char(c))
+    else
+      table.insert(res, "_")
+      table.insert(res, rio_tohex(c))
+    end
+  end
+  return table.concat(res, "")
+end
+
 filestack = { n=0 }
 callstack = { n=0 }
 rio_open(arg[1])
-preamble = ""
-body = ""
+preamble = {}
+body = {}
+curbody = {}
 
 stack = { n=0 }
 symboltable = {}
@@ -61,6 +94,7 @@ rio_addtype("__token")
 rio_addtype("__block")
 rio_addtype("__procedure")
 rio_addtype("__resource")
+rio_addtype("__resource-write")
 
 function rio_push(val)
   stack.n = stack.n + 1
@@ -92,6 +126,9 @@ function rio_requiretype(val, ty)
 end
 
 binding_prefix = ""
+binding_prefixes = {}
+
+indent_level = ""
 
 require "core_meta"
 require "core_resource"
@@ -100,9 +137,9 @@ require "core_structure"
 function eval(atom)
   if atom.ty == PARSE_END then
     local fd = assert(io.open(string.sub(arg[1], 1, -4) .. backend, "w"))
-    fd:write(preamble)
+    fd:write(table.concat(preamble, ""))
     fd:write("\n")
-    fd:write(body)
+    fd:write(table.concat(body, ""))
     fd:close()
   elseif atom.ty == PARSE_BLOCK then
     local val = { ty=types["__block"], data=atom.data,

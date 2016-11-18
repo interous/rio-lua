@@ -5,13 +5,21 @@ rio_addcore("procedure", function(self)
   rio_requiretype(name, types["__token"])
   rio_addsymbol(name.data, { ty=types["__procedure"], body=body.data,
     name=name.data, eval = function(self)
+      local base_sanitized = rio_sanitize(self.name)
+      local sanitized = base_sanitized
+      local mangle = 0
+      while binding_prefixes[sanitized] do
+        sanitized = base_sanitized .. mangle
+        mangle = mangle + 1
+      end
+      binding_prefixes[sanitized] = 0
       local old_prefix = binding_prefix
-      if binding_prefix == "" then binding_prefix = "_" end
-      binding_prefix = binding_prefix .. self.name .. "_"
+      binding_prefix = "__" .. sanitized .. "__"
       local i
       for i=1,self.block.n do
         eval(self.block[i])
       end
+      binding_prefixes[sanitized] = nil
       binding_prefix = old_prefix
     end })
 end)
