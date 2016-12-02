@@ -1,13 +1,18 @@
-rio_addcore("as-code", function(self)
+rio_addcore("backend-code", function(self)
   local code = rio_pop()
   rio_requiretype(code, types["__token"])
-  rio_push({ ty=types["__token"], data=indent_level .. code.data .. "\n",
-    eval = function(self) rio_push(self) end })
+  table.insert(curbody, "  " .. code.data .. "\n")
+end)
+
+rio_addcore("backend-include", function(self)
+  local file = rio_pop()
+  rio_requiretype(file, types["__token"])
+  backend_include(file.data)
 end)
 
 rio_addcore("___token___token_++", function(self)
-  local a = rio_pop()
   local b = rio_pop()
+  local a = rio_pop()
   rio_requiretype(a, types["__token"])
   rio_requiretype(b, types["__token"])
   rio_push({ ty=types["__token"], data=a.data .. b.data,

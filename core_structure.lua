@@ -23,3 +23,11 @@ rio_addcore("procedure", function(self)
       binding_prefix = old_prefix
     end })
 end)
+
+rio_addcore("finalize", function(self)
+  local body = rio_pop()
+  rio_requiretype(body, types["__block"])
+  rio_flatten(body)
+  finalize = table.concat(curbody, "")
+  cur_body = {}
+end)

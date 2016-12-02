@@ -65,6 +65,7 @@ callstack = { n=0 }
 rio_open(arg[1])
 preamble = {}
 body = {}
+finalize = nil
 curbody = {}
 
 stack = { n=0 }
@@ -89,6 +90,7 @@ function rio_addtype(ty)
   types[ty] = types.n
 end
 
+rio_addtype("__parse-end")
 rio_addtype("__core")
 rio_addtype("__token")
 rio_addtype("__block")
@@ -128,29 +130,28 @@ end
 binding_prefix = ""
 binding_prefixes = {}
 
-indent_level = ""
-
 require "core_meta"
 require "core_resource"
 require "core_structure"
 
+function rio_flatten(block)
+  local i
+  for i=1,block.data.n do
+    block.data[i]:eval()
+  end
+end
+
 function eval(atom)
-  if atom.ty == PARSE_END then
+  if atom.ty == types["__parse-end"] then
     local fd = assert(io.open(string.sub(arg[1], 1, -4) .. backend, "w"))
     fd:write(table.concat(preamble, ""))
     fd:write("\n")
     fd:write(table.concat(body, ""))
+    fd:write("\n")
+    fd:write(backend_finalize(finalize))
     fd:close()
-  elseif atom.ty == PARSE_BLOCK then
-    local val = { ty=types["__block"], data=atom.data,
-      eval = function(self) rio_push(self) end }
-    val:eval()
-  elseif atom.ty == PARSE_QUOTE then
-    local val = { ty=types["__token"], data=atom.data,
-      eval = function(self) rio_push(self) end }
-    val:eval()
-  elseif atom.ty == PARSE_TOKEN then
-    rio_getsymbol(atom.data):eval()
+  else
+    atom:eval()
   end
 end
 

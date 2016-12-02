@@ -13,7 +13,7 @@ rio_addcore("write", function(self)
   rio_requiretype(resource, types["__token"])
   rio_requiretype(name, types["__token"])
   rio_addsymbol(name.data, { ty=types["__resource-write"],
-    resource=resource.data, name=name.data, body=body.data,
+    resource=resource.data, name=name.data, body=body,
     eval = function(self)
       local base_sanitized = rio_sanitize(self.name)
       local sanitized = base_sanitized
@@ -25,13 +25,7 @@ rio_addcore("write", function(self)
       binding_prefixes[sanitized] = 0
       local old_prefix = binding_prefix
       binding_prefix = "__" .. sanitized .. "__"
-      local i
-      for i=1,self.block.n do
-        eval(self.block[i])
-      end
-      local code = rio_pop()
-      rio_requiretype(code, types["__token"])
-      table.insert(curbody, code.data)
+      rio_flatten(self.body)
       binding_prefixes[sanitized] = nil
       binding_prefix = old_prefix
     end })

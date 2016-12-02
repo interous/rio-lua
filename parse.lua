@@ -29,7 +29,7 @@ function nextatom()
   if c == "" then
     rio_close()
     if filestack.n == 0 then
-      return { data=nil, ty=PARSE_END }
+      return { ty=types["__parse-end"] }
     else
       return nextatom()
     end
@@ -53,7 +53,8 @@ function nextatom()
       end
     end
     nextchar()
-    return { data=block, ty=PARSE_BLOCK }
+    return { ty=types["__block"], data=block,
+      eval = function(self) rio_push(self) end }
   elseif c == "}" then
     orphanbrace()
   elseif c == "'" or c == "." or c == "-" or tonumber(c) then
@@ -63,7 +64,8 @@ function nextatom()
       quote = quote .. c
       c = nextchar()
     end
-    return { data=quote, ty=PARSE_QUOTE }
+    return { ty=types["__token"], data=quote,
+      eval = function(self) rio_push(self) end }
   elseif c == "\"" then
     local quote = ""
     local startfile = f.name
@@ -88,13 +90,15 @@ function nextatom()
       end
     end
     nextchar()
-    return { data=quote, ty=PARSE_QUOTE }
+    return { ty=types["__token"], data=quote,
+      eval = function(self) rio_push(self) end }
   else
     local token = ""
     while c ~= " " and c ~= "\n" and c ~= "\t" and c ~= "{" and c ~= "}" do
       token = token .. c
       c = nextchar()
     end
-    return { data=token, ty=PARSE_TOKEN }
+    return { ty=types["__token"], data=token,
+      eval = function(self) rio_getsymbol(self.data):eval() end }
   end
 end
