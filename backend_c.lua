@@ -10,3 +10,7 @@ function backend_include(file)
     backend_included[file] = true
   end
 end
+
+function backend_int4(s)
+  return tostring(s)
+end

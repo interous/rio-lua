@@ -97,6 +97,13 @@ function rio_addcoretype(name)
     eval = function(self) reservednoeval(self.name) end })
 end
 
+function rio_addvaltype(name, parser)
+  rio_addtype(name, type["__val"])
+  rio_addsymbol(name, { name=name,
+    eval = function(self) reservednoeval(self.name) end })
+  literalparsers[name] = parser
+end
+
 function rio_addmetatype(name, parser)
   rio_addtype(name, 0)
   rio_addsymbol(name, { name=name,
@@ -151,13 +158,9 @@ rio_addcoretype("__procedure")
 rio_addcoretype("__constructor")
 rio_addcoretype("__resource")
 rio_addcoretype("__resource-write")
+rio_addcoretype("__val")
 
-rio_addmetatype("$float8", function(s, ty)
-  local parsed = tonumber(s)
-  if not parsed then badliteral(s, ty, "$float8") end
-  rio_push({ ty=types[ty], data=parsed,
-    eval=function(self) rio_push(self) end })
-end)
+require "core_numerics"
 
 rio_push({ ty=types["__token"], data="$idx" })
 rio_push({ ty=types["__token"], data="$float8" })
