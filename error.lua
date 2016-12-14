@@ -24,6 +24,12 @@ function invalidescape(c)
   os.exit(-1)
 end
 
+function reservednoeval(name)
+  print("RESERVED_NO_EVAL " .. name)
+  stacktrace()
+  os.exit(-1)
+end
+
 function invalidpop()
   print("POP_WITH_EMPTY_STACK")
   stacktrace()
@@ -54,8 +60,14 @@ function wrongtype(name, expected, actual)
   os.exit(-1)
 end
 
-function notanumber(val)
-  print("NOT_A_NUMBER " .. val)
+function notatype(name)
+  print("NOT_A_TYPE " .. name)
+  stacktrace()
+  os.exit(-1)
+end
+
+function badliteral(s, outer, inner)
+  print("BAD_LITERAL " .. s .. " couldn't be parsed as " .. outer .. " (i.e., " .. inner .. ")")
   stacktrace()
   os.exit(-1)
 end

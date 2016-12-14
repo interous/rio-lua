@@ -83,28 +83,35 @@ end
 require ("backend_" .. backend)
 
 types = { n=0 }
+literalparsers = {}
 
-function rio_addtype(ty)
+function rio_addtype(ty, kind)
   types.n = types.n + 1
-  types[types.n] = ty
+  types[types.n] = { ty=ty, kind=kind }
   types[ty] = types.n
 end
 
-rio_addtype("__parse-end")
-rio_addtype("__core")
-rio_addtype("__token")
-rio_addtype("__block")
-rio_addtype("__procedure")
-rio_addtype("__resource")
-rio_addtype("__resource-write")
+function rio_addcoretype(name)
+  rio_addtype(name, 0)
+  rio_addsymbol(name, { name=name,
+    eval = function(self) reservednoeval(self.name) end })
+end
+
+function rio_addmetatype(name, parser)
+  rio_addtype(name, 0)
+  rio_addsymbol(name, { name=name,
+    eval = function(self) reservednoeval(self.name) end })
+  literalparsers[name] = parser
+end
 
 function rio_push(val)
   stack.n = stack.n + 1
   stack[stack.n] = val
 end
 
-function rio_pop()
+function rio_pop(ty)
   if stack.n == 0 then invalidpop() end
+  rio_requiretype(stack[stack.n], ty)
   stack.n = stack.n - 1
   return stack[stack.n + 1]
 end
@@ -133,6 +140,28 @@ binding_prefixes = {}
 require "core_meta"
 require "core_resource"
 require "core_structure"
+require "core_type"
+
+rio_addcoretype("__core")
+rio_addcoretype("__type")
+rio_addcoretype("__parse-end")
+rio_addcoretype("__token")
+rio_addcoretype("__block")
+rio_addcoretype("__procedure")
+rio_addcoretype("__constructor")
+rio_addcoretype("__resource")
+rio_addcoretype("__resource-write")
+
+rio_addmetatype("$float8", function(s, ty)
+  local parsed = tonumber(s)
+  if not parsed then badliteral(s, ty, "$float8") end
+  rio_push({ ty=types[ty], data=parsed,
+    eval=function(self) rio_push(self) end })
+end)
+
+rio_push({ ty=types["__token"], data="$idx" })
+rio_push({ ty=types["__token"], data="$float8" })
+rio_getsymbol("type"):eval()
 
 function rio_flatten(block)
   local i

@@ -1,8 +1,6 @@
 rio_addcore("procedure", function(self)
-  local body = rio_pop()
-  local name = rio_pop()
-  rio_requiretype(body, types["__block"])
-  rio_requiretype(name, types["__token"])
+  local body = rio_pop(types["__block"])
+  local name = rio_pop(types["__token"])
   rio_addsymbol(name.data, { ty=types["__procedure"], body=body.data,
     name=name.data, eval = function(self)
       local base_sanitized = rio_sanitize(self.name)
@@ -25,8 +23,7 @@ rio_addcore("procedure", function(self)
 end)
 
 rio_addcore("finalize", function(self)
-  local body = rio_pop()
-  rio_requiretype(body, types["__block"])
+  local body = rio_pop(types["__block"])
   rio_flatten(body)
   finalize = table.concat(curbody, "")
   cur_body = {}
