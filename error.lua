@@ -54,8 +54,14 @@ function notbound(name)
   os.exit(-1)
 end
 
-function wrongtype(name, expected, actual)
-  print("WRONG_TYPE " .. name .. " - expected " .. types[expected] .. " got " .. types[actual])
+function wrongtype(expected, actual)
+  print("WRONG_TYPE expected " .. types[expected].ty .. " got " .. types[actual].ty)
+  stacktrace()
+  os.exit(-1)
+end
+
+function wrongkind(expected, actual)
+  print("WRONG_KIND expected " .. types[expected].ty .. " got " .. types[actual].ty)
   stacktrace()
   os.exit(-1)
 end
@@ -68,6 +74,12 @@ end
 
 function badliteral(s, outer, inner)
   print("BAD_LITERAL " .. s .. " couldn't be parsed as " .. outer .. " (i.e., " .. inner .. ")")
+  stacktrace()
+  os.exit(-1)
+end
+
+function iftooshort(n)
+  print("IF_TOO_SHORT need at least 2 blocks, found " .. tostring(n))
   stacktrace()
   os.exit(-1)
 end

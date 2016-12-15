@@ -60,15 +60,45 @@ function rio_sanitize(str)
   return table.concat(res, "")
 end
 
-filestack = { n=0 }
-callstack = { n=0 }
+function newlist() return { n=0 } end
+
+function listpush(l, e)
+  l.n = l.n + 1
+  l[l.n] = e
+end
+
+function listpop(l)
+  if l.n == 0 then return nil end
+  local e = l[l.n]
+  l[l.n] = nil
+  l.n = l.n - 1
+  return e
+end
+
+function rio_listtoblock(l)
+  return { ty=types["__block"], data=l,
+    eval = function(self) rio_push(self) end }
+end
+
+function rio_strtosymbol(s)
+  return { ty=types["__symbol"], data=s,
+    eval = function(self) rio_getsymbol(self.data):eval() end }
+end
+
+function rio_strtoquote(s)
+  return { ty=types["__quote"], data=s,
+    eval = function(self) rio_push(self) end }
+end
+
+filestack = newlist()
+callstack = newlist()
 rio_open(arg[1])
 preamble = {}
 body = {}
 finalize = nil
 curbody = {}
 
-stack = { n=0 }
+stack = newlist()
 symboltable = {}
 backendtable = {}
 
@@ -82,7 +112,7 @@ end
 
 require ("backend_" .. backend)
 
-types = { n=0 }
+types = newlist()
 literalparsers = {}
 
 function rio_addtype(ty, kind)
@@ -91,21 +121,15 @@ function rio_addtype(ty, kind)
   types[ty] = types.n
 end
 
-function rio_addcoretype(name)
-  rio_addtype(name, 0)
+function rio_addcoretype(name, kind)
+  kind = kind or 0
+  rio_addtype(name, kind)
   rio_addsymbol(name, { name=name,
     eval = function(self) reservednoeval(self.name) end })
 end
 
-function rio_addvaltype(name, parser)
-  rio_addtype(name, type["__val"])
-  rio_addsymbol(name, { name=name,
-    eval = function(self) reservednoeval(self.name) end })
-  literalparsers[name] = parser
-end
-
-function rio_addmetatype(name, parser)
-  rio_addtype(name, 0)
+function rio_addvaltype(name, kind, parser)
+  rio_addtype(name, kind)
   rio_addsymbol(name, { name=name,
     eval = function(self) reservednoeval(self.name) end })
   literalparsers[name] = parser
@@ -118,9 +142,14 @@ end
 
 function rio_pop(ty)
   if stack.n == 0 then invalidpop() end
-  rio_requiretype(stack[stack.n], ty)
+  if ty then rio_requiretype(stack[stack.n], ty) end
   stack.n = stack.n - 1
   return stack[stack.n + 1]
+end
+
+function rio_peek()
+  if stack.n == 0 then invalidpop() end
+  return stack[stack.n]
 end
 
 function rio_addsymbol(name, val)
@@ -141,6 +170,10 @@ function rio_requiretype(val, ty)
   if val.ty ~= ty then wrongtype(ty, val.ty) end
 end
 
+function rio_requirekind(val, kind)
+  if types[types[val.ty]].kind ~= kind then wrongkind(kind, types[val.ty].kind) end
+end
+
 binding_prefix = ""
 binding_prefixes = {}
 
@@ -152,24 +185,25 @@ require "core_type"
 rio_addcoretype("__core")
 rio_addcoretype("__type")
 rio_addcoretype("__parse-end")
-rio_addcoretype("__token")
+rio_addcoretype("__symbol")
+rio_addcoretype("__quote")
 rio_addcoretype("__block")
 rio_addcoretype("__procedure")
 rio_addcoretype("__constructor")
 rio_addcoretype("__resource")
 rio_addcoretype("__resource-write")
-rio_addcoretype("__val")
+rio_addcoretype("__#val", types["__type"])
+rio_addcoretype("__^val", types["__type"])
 
 require "core_numerics"
+require "core_bool"
 
-rio_push({ ty=types["__token"], data="$idx" })
-rio_push({ ty=types["__token"], data="$float8" })
-rio_getsymbol("type"):eval()
+require "prelude"
 
 function rio_flatten(block)
   local i
-  for i=1,block.data.n do
-    block.data[i]:eval()
+  for i=1,block.n do
+    block[i]:eval()
   end
 end
 

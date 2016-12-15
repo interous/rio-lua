@@ -1,15 +1,15 @@
 rio_addcore("singleton", function(self)
-  local name = rio_pop(types["__token"])
+  local name = rio_pop(types["__quote"])
   rio_addsymbol(name.data, { ty=types["__resource"], name=name.data,
     eval = function(self) rio_push(self) end })
 end)
 
 rio_addcore("write", function(self)
   local body = rio_pop(types["__block"])
-  local resource = rio_pop(types["__token"])
-  local name = rio_pop(types["__token"])
+  local resource = rio_pop(types["__quote"])
+  local name = rio_pop(types["__quote"])
   rio_addsymbol(name.data, { ty=types["__resource-write"],
-    resource=resource.data, name=name.data, body=body,
+    resource=resource.data, name=name.data, body=body.data,
     eval = function(self)
       local base_sanitized = rio_sanitize(self.name)
       local sanitized = base_sanitized

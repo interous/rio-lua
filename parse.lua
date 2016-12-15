@@ -64,7 +64,7 @@ function nextatom()
       quote = quote .. c
       c = nextchar()
     end
-    return { ty=types["__token"], data=quote,
+    return { ty=types["__quote"], data=quote,
       eval = function(self) rio_push(self) end }
   elseif c == "\"" then
     local quote = ""
@@ -90,7 +90,7 @@ function nextatom()
       end
     end
     nextchar()
-    return { ty=types["__token"], data=quote,
+    return { ty=types["__quote"], data=quote,
       eval = function(self) rio_push(self) end }
   else
     local token = ""
@@ -98,7 +98,7 @@ function nextatom()
       token = token .. c
       c = nextchar()
     end
-    return { ty=types["__token"], data=token,
+    return { ty=types["__symbol"], data=token,
       eval = function(self) rio_getsymbol(self.data):eval() end }
   end
 end
