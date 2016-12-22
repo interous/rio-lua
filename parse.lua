@@ -35,11 +35,12 @@ function nextatom()
     end
   end
   
+  local startfile = f.name
+  local startline = f.line
+  local startcol = f.col
+  
   if c == "{" then
     local block = { n=0 }
-    local startfile = f.name
-    local startline = f.line
-    local startcol = f.col
     nextchar()
     while curchar() ~= "}" do
       block.n = block.n + 1
@@ -64,8 +65,7 @@ function nextatom()
       quote = quote .. c
       c = nextchar()
     end
-    return { ty=types["__quote"], data=quote,
-      eval = function(self) rio_push(self) end }
+    return rio_strtoquote(quote)
   elseif c == "\"" then
     local quote = ""
     local startfile = f.name
@@ -90,15 +90,13 @@ function nextatom()
       end
     end
     nextchar()
-    return { ty=types["__quote"], data=quote,
-      eval = function(self) rio_push(self) end }
+    return rio_strtoquote(quote)
   else
     local token = ""
     while c ~= " " and c ~= "\n" and c ~= "\t" and c ~= "{" and c ~= "}" do
       token = token .. c
       c = nextchar()
     end
-    return { ty=types["__symbol"], data=token,
-      eval = function(self) rio_getsymbol(self.data):eval() end }
+    return rio_strtosymbol(token, startfile, startline, startcol)
   end
 end

@@ -14,3 +14,11 @@ end
 function backend_int4(s)
   return tostring(s)
 end
+
+function backend_int4_plus(a, b)
+  return "(" .. a .. " + " .. b .. ")"
+end
+
+function backend_int4_times(a, b)
+  return "(" .. a .. " * " .. b .. ")"
+end

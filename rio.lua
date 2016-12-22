@@ -80,13 +80,16 @@ function rio_listtoblock(l)
     eval = function(self) rio_push(self) end }
 end
 
-function rio_strtosymbol(s)
-  return { ty=types["__symbol"], data=s,
-    eval = function(self) rio_getsymbol(self.data):eval() end }
+function rio_strtosymbol(s, f, l, c)
+  return { ty=types["__symbol"], data=s, file=f, line=l, col=c,
+    eval = function(self)
+      rio_errorbase = { symbol=self.data, file=self.file, line=self.line, col=self.col }
+      rio_getsymbol(self.data):eval()
+    end }
 end
 
 function rio_strtoquote(s)
-  return { ty=types["__quote"], data=s,
+  return { ty=types["__quote"], data=s, line=l, col=c,
     eval = function(self) rio_push(self) end }
 end
 
@@ -113,12 +116,15 @@ end
 require ("backend_" .. backend)
 
 types = newlist()
+kinds = newlist()
 literalparsers = {}
 
 function rio_addtype(ty, kind)
   types.n = types.n + 1
-  types[types.n] = { ty=ty, kind=kind }
+  kinds.n = kinds.n + 1
+  types[types.n] = ty
   types[ty] = types.n
+  kinds[kinds.n] = types[kind] or 0
 end
 
 function rio_addcoretype(name, kind)
@@ -154,6 +160,9 @@ end
 
 function rio_addsymbol(name, val)
   if symboltable[name] then alreadybound(name) end
+  if not val.file then val.file = rio_errorbase.file end
+  if not val.line then val.line = rio_errorbase.line end
+  if not val.col then val.col = rio_errorbase.col end
   symboltable[name] = val
 end
 
@@ -171,7 +180,15 @@ function rio_requiretype(val, ty)
 end
 
 function rio_requirekind(val, kind)
-  if types[types[val.ty]].kind ~= kind then wrongkind(kind, types[val.ty].kind) end
+  if val ~= kind then wrongkind(kind, val) end
+end
+
+function rio_requiresamekind(a, b, c)
+  if not types[a] then notatype(a) end
+  if not types[b] then notatype(b) end
+  if not types[c] then notatype(c) end
+  if kinds[types[a]] ~= kinds[types[b]] then kindmismatch(kinds[types[a]], kinds[types[b]]) end
+  if kinds[types[b]] ~= kinds[types[c]] then kindmismatch(kinds[types[b]], kinds[types[c]]) end
 end
 
 binding_prefix = ""
@@ -189,16 +206,23 @@ rio_addcoretype("__symbol")
 rio_addcoretype("__quote")
 rio_addcoretype("__block")
 rio_addcoretype("__procedure")
+rio_addcoretype("__derived")
 rio_addcoretype("__constructor")
 rio_addcoretype("__resource")
 rio_addcoretype("__resource-write")
-rio_addcoretype("__#val", types["__type"])
-rio_addcoretype("__^val", types["__type"])
+rio_addcoretype("__#val", "__type")
+rio_addcoretype("__^val", "__type")
 
 require "core_numerics"
 require "core_bool"
 
 require "prelude"
+
+function rio_invokewithtrace(block)
+  listpush(rio_errorstack, rio_errorbase)
+  rio_flatten(block)
+  listpop(rio_errorstack)
+end
 
 function rio_flatten(block)
   local i

@@ -1,5 +1,16 @@
+rio_errorbase = { symbol="(init)", file="core", line=0, col=0 }
+rio_errorstack = { n=0 }
+
 function stacktrace()
-  print("stack trace goes here")
+  print("stack trace:")
+  print("  " .. rio_errorbase.symbol .. " at " .. rio_errorbase.file ..
+    " " .. rio_errorbase.line .. ":" .. rio_errorbase.col)
+  local i
+  for i=rio_errorstack.n,1,-1 do
+    print("  " .. rio_errorstack[i].symbol .. " at " ..
+      rio_errorstack[i].file .. " " .. rio_errorstack[i].line .. ":" ..
+      rio_errorstack[i].col)
+  end
 end
 
 function unterminatedblock(file, line, col)
@@ -55,19 +66,31 @@ function notbound(name)
 end
 
 function wrongtype(expected, actual)
-  print("WRONG_TYPE expected " .. types[expected].ty .. " got " .. types[actual].ty)
+  print("WRONG_TYPE expected " .. types[expected] .. " got " .. types[actual])
   stacktrace()
   os.exit(-1)
 end
 
 function wrongkind(expected, actual)
-  print("WRONG_KIND expected " .. types[expected].ty .. " got " .. types[actual].ty)
+  print("WRONG_KIND expected " .. types[expected] .. " got " .. types[actual])
+  stacktrace()
+  os.exit(-1)
+end
+
+function kindmismatch(a, b)
+  print("KIND_MISMATCH " .. types[a] .. " " .. types[b])
   stacktrace()
   os.exit(-1)
 end
 
 function notatype(name)
   print("NOT_A_TYPE " .. name)
+  stacktrace()
+  os.exit(-1)
+end
+
+function nonnumerickind(name)
+  print("NON_NUMERIC_KIND " .. types[name])
   stacktrace()
   os.exit(-1)
 end

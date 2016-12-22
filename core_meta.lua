@@ -9,7 +9,7 @@ rio_addcore("backend-include", function(self)
 end)
 
 rio_addcore("poly", function(self)
-  local arity = rio_pop(types["#idx"]).data
+  local arity = rio_pop(types["#arity"]).data
   local name = rio_peek()
   rio_requiretype(name, types["__quote"])
   name = name.data
@@ -18,16 +18,16 @@ rio_addcore("poly", function(self)
   local i
   for i = 1, arity do
     listpush(body, rio_strtoquote(tostring(arity + 1 - i)))
-    listpush(body, rio_strtosymbol("#idx"))
-    listpush(body, rio_strtosymbol("type-at"))
-    listpush(body, rio_strtosymbol("type->quote"))
-    listpush(body, rio_strtosymbol("___quote___quote_++"))
+    listpush(body, rio_strtosymbol("#idx", rio_errorbase.file, rio_errorbase.line, rio_errorbase.col))
+    listpush(body, rio_strtosymbol("type-at", rio_errorbase.file, rio_errorbase.line, rio_errorbase.col))
+    listpush(body, rio_strtosymbol("type->quote", rio_errorbase.file, rio_errorbase.line, rio_errorbase.col))
+    listpush(body, rio_strtosymbol("___quote___quote_++", rio_errorbase.file, rio_errorbase.line, rio_errorbase.col))
     listpush(body, rio_strtoquote("_"))
-    listpush(body, rio_strtosymbol("___quote___quote_++"))
+    listpush(body, rio_strtosymbol("___quote___quote_++", rio_errorbase.file, rio_errorbase.line, rio_errorbase.col))
   end
   listpush(body, rio_strtoquote(name))
-  listpush(body, rio_strtosymbol("___quote___quote_++"))
-  listpush(body, rio_strtosymbol("eval"))
+  listpush(body, rio_strtosymbol("___quote___quote_++", rio_errorbase.file, rio_errorbase.line, rio_errorbase.col))
+  listpush(body, rio_strtosymbol("eval", rio_errorbase.file, rio_errorbase.line, rio_errorbase.col))
   rio_push(rio_listtoblock(body))
   rio_getsymbol("procedure"):eval()
 end)
@@ -76,7 +76,7 @@ end)
 rio_addcore("kind-at", function(self)
   local idx = rio_pop(types["#idx"])
   if idx.data >= stack.n or idx.data < 0 then outofstackbounds() end
-  rio_push({ ty=types["__type"], data=types[stack[stack.n - idx.data].ty].kind,
+  rio_push({ ty=types["__type"], data=kinds[stack[stack.n - idx.data].ty],
     eval = function(self) rio_push(self) end })
 end)
 
@@ -90,11 +90,11 @@ end)
 rio_addcore("type->quote", function(self)
   local ty = rio_pop(types["__type"]).data
   if not types[ty] then notatype(ty) end
-  rio_push(rio_strtoquote(types[ty].ty))
+  rio_push(rio_strtoquote(types[ty]))
 end)
 
 rio_addcore("thunk->quote", function(self)
   local thunk = rio_pop()
-  rio_requirekind(types[types[types[types[thunk.ty].kind].ty]], types["__^val"])
+  rio_requirekind(kinds[kinds[thunk.ty]], types["__^val"])
   rio_push(rio_strtoquote(tostring(thunk.data)))
 end)
