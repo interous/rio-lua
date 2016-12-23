@@ -214,7 +214,7 @@ rio_addcoretype("__#val", "__type")
 rio_addcoretype("__^val", "__type")
 
 require "core_numerics"
-require "core_bool"
+require "core_binary"
 
 require "prelude"
 

@@ -22,3 +22,7 @@ end
 function backend_int4_times(a, b)
   return "(" .. a .. " * " .. b .. ")"
 end
+
+function backend_binary(s)
+  if s then return "1" else return "0" end
+end

@@ -25,25 +25,24 @@ rio_addcore("if", function(self)
     listpush(blocks, rio_pop(types["__block"]).data)
   end
   if blocks.n < 2 then iftooshort(blocks.n) end
-  local codestack = newlist()
-  local outerbody = curbody
-  curbody = {}
   while blocks.n > 0 do
     rio_flatten(listpop(blocks))
-    if rio_peek().ty == types["#bool"] then
-      if rio_pop(types["#bool"]).data then
+    if rio_peek().ty == types["#b"] then
+      if rio_pop(types["#b"]).data then
         rio_flatten(listpop(blocks))
-        table.insert(codestack, table.concat(curbody, ""))
         break
       else
         listpop(blocks)
         if blocks.n == 0 then break
         elseif blocks.n == 1 then
           rio_flatten(listpop(blocks))
-          table.insert(codestack, table.concat(curbody, ""))
           break
         end
       end
+    else if rio_peek().ty == types["^b"] then
+      -- hmmmmmmmmmmmmmmmmmmmmmmmmmmmm
+    else
+      wrongtypestr("#b or ^b", rio_peek().ty)
     end
   end
   curbody = outerbody

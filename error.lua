@@ -71,6 +71,12 @@ function wrongtype(expected, actual)
   os.exit(-1)
 end
 
+function wrongtypestr(expected, actual)
+  print("WRONG_TYPE expected " .. expected .. " got " .. types[actual])
+  stacktrace()
+  os.exit(-1)
+end
+
 function wrongkind(expected, actual)
   print("WRONG_KIND expected " .. types[expected] .. " got " .. types[actual])
   stacktrace()
