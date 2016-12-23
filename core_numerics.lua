@@ -20,16 +20,16 @@ rio_addcore("derive+", function(self)
   rio_requiresamekind(a, b, c)
   local backend
   if kinds[types[a]] == types["^int4"] then
-    backend = backend_int4_plus
+    f = backend_int4_plus
   else
     nonnumerickind(kinds[types[a]])
   end
   rio_addsymbol("_" .. a .. "_" .. b .. "_+", { ty=types["__derived"],
-    aty=types[a], bty=types[b], cty=types[c], backend=backend,
+    aty=types[a], bty=types[b], cty=types[c], f=f,
     eval = function(self)
       local b = rio_pop(self.bty).data
       local a = rio_pop(self.aty).data
-      rio_push({ ty=self.cty, data=self.backend(a, b),
+      rio_push({ ty=self.cty, data=self.f(a, b),
         eval=function(self) rio_push(self) end })
     end })
 end)
@@ -39,18 +39,18 @@ rio_addcore("derive*", function(self)
   local b = rio_pop(types["__quote"]).data
   local a = rio_pop(types["__quote"]).data
   rio_requiresamekind(a, b, c)
-  local backend
+  local f
   if kinds[types[a]] == types["^int4"] then
-    backend = backend_int4_times
+    f = backend_int4_times
   else
     nonnumerickind(kinds[types[a]])
   end
   rio_addsymbol("_" .. a .. "_" .. b .. "_*", { ty=types["__derived"],
-    aty=types[a], bty=types[b], cty=types[c], backend=backend,
+    aty=types[a], bty=types[b], cty=types[c], f=f,
     eval = function(self)
       local b = rio_pop(self.bty).data
       local a = rio_pop(self.aty).data
-      rio_push({ ty=self.cty, data=self.backend(a, b),
+      rio_push({ ty=self.cty, data=self.f(a, b),
         eval=function(self) rio_push(self) end })
     end })
 end)

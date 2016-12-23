@@ -47,14 +47,14 @@ end)
 rio_addcore("___quote___quote_=", function(self)
   local b = rio_pop(types["__quote"]).data
   local a = rio_pop(types["__quote"]).data
-  rio_push({ ty=types["#bool"], data=a == b,
+  rio_push({ ty=types["#b"], data=a == b,
     eval = function(self) rio_push(self) end })
 end)
 
 rio_addcore("___type___type_=", function(self)
   local b = rio_pop(types["__type"]).data
   local a = rio_pop(types["__type"]).data
-  rio_push({ ty=types["#bool"], data=a == b,
+  rio_push({ ty=types["#b"], data=a == b,
     eval = function(self) rio_push(self) end })
 end)
 
@@ -64,6 +64,14 @@ rio_addcore("lift", function(self)
   local elem = stack[stack.n - idx.data]
   for i=stack.n-idx.data,stack.n-1 do stack[i] = stack[i+1] end
   stack[stack.n] = elem
+end)
+
+rio_addcore("dup", function(self)
+  rio_push(rio_peek())
+end)
+
+rio_addcore("drop", function(self)
+  rio_pop()
 end)
 
 rio_addcore("type-at", function(self)

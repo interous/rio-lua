@@ -25,30 +25,48 @@ rio_addcore("if", function(self)
     listpush(blocks, rio_pop(types["__block"]).data)
   end
   if blocks.n < 2 then iftooshort(blocks.n) end
-  while blocks.n > 0 do
-    rio_flatten(listpop(blocks))
+  
+  Y(function(f) return function(b)
+    rio_flatten(listpop(b))
     if rio_peek().ty == types["#b"] then
       if rio_pop(types["#b"]).data then
-        rio_flatten(listpop(blocks))
-        break
+        rio_flatten(listpop(b))
       else
-        listpop(blocks)
-        if blocks.n == 0 then break
-        elseif blocks.n == 1 then
-          rio_flatten(listpop(blocks))
-          break
+        listpop(b)
+        if b.n == 1 then
+          rio_flatten(listpop(b))
+        elseif b.n > 1 then
+          f(b)
         end
       end
-    else if rio_peek().ty == types["^b"] then
-      -- hmmmmmmmmmmmmmmmmmmmmmmmmmmmm
+    elseif rio_peek().ty == types["^b"] then
+      local conditionvar = rio_pop(types["^b"]).data
+      local outerbody = curbody
+      curbody = {}
+      local startstack = rio_stackcopy()
+      rio_flatten(listpop(b))
+      local truebody = table.concat(curbody, "")
+      local truestack = rio_stackcopy()
+      curbody = {}
+      stack = startstack
+      local falsestack
+      if b.n == 1 then
+        rio_flatten(listpop(b))
+        falsestack = rio_stackcopy()
+      elseif b.n > 1 then
+        f(b)
+        falsestack = rio_stackcopy()
+      else
+        falsestack = startstack
+      end
+      rio_stackeq(truestack, falsestack)
+      local falsebody = table.concat(curbody, "")
+      curbody = outerbody
+      table.insert(curbody, backend_if(conditionvar, truebody, falsebody))
     else
       wrongtypestr("#b or ^b", rio_peek().ty)
     end
-  end
-  curbody = outerbody
-  if codestack.n <= 1 then
-    table.insert(curbody, table.concat(codestack, ""))
-  end
+  end end)(blocks)
 end)
 
 rio_addcore("finalize", function(self)

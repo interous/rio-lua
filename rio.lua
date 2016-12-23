@@ -10,6 +10,13 @@ if not arg[1] then
   os.exit(-1)
 end
 
+-- The legendary Y-combinator, which is used for anonymous recursion.
+function Y(f)
+  return function(...)
+    return (function(x) return x(x) end)(function(x) return f(function(y) return x(x)(y) end) end)(...)
+  end
+end
+
 function rio_open(name)
   filestack.n = filestack.n + 1
   local fd = assert(io.open(name, "r"))
@@ -156,6 +163,40 @@ end
 function rio_peek()
   if stack.n == 0 then invalidpop() end
   return stack[stack.n]
+end
+
+function rio_stackcopy()
+  local s = { n=stack.n }
+  local i
+  for i = 1, stack.n do
+    s[i] = stack[i]
+  end
+  return s
+end
+
+function rio_stackeq(a, b)
+  if a.n ~= b.n then stackmismatch(a, b) end
+  local i
+  for i = 1, a.n do
+    if a[i].ty ~= b[i].ty or a[i].data ~= b[i].data then stackmismatch(a, b) end
+  end
+end
+
+function rio_printstack(s)
+  if s.n == 0 then
+    print ("  (empty)")
+  else
+    local output = {}
+    local i
+    for i = 1, s.n do
+      if types[kinds[s[i].ty]]:sub(1, 1) == "^" then
+        table.insert(output, types[kinds[s[i].ty]])
+      else
+        table.insert(output, types[kinds[s[i].ty]] .. " " .. tostring(s[i].data))
+      end
+    end
+    print("  " .. table.concat(output, ", "))
+  end
 end
 
 function rio_addsymbol(name, val)

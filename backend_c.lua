@@ -11,6 +11,10 @@ function backend_include(file)
   end
 end
 
+function backend_if(c, t, f)
+  return "  if(" .. c .. ") {\n" .. t .. "  } else {\n" .. f .. "  }\n"
+end
+
 function backend_int4(s)
   return tostring(s)
 end
@@ -21,6 +25,10 @@ end
 
 function backend_int4_times(a, b)
   return "(" .. a .. " * " .. b .. ")"
+end
+
+function backend_int4_equal(a, b)
+  return "(" .. a .. " == " .. b .. ")"
 end
 
 function backend_binary(s)

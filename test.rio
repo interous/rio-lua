@@ -1,0 +1,23 @@
+'console singleton
+
+'A '^int4 unit
+'B '^int4 unit
+
+'A 'A 'A derive+
+'B 'B 'B derive+
+'A 'A 'B derive*
+'A derive=
+
+'print 'console {
+  "stdio.h" backend-include
+  { 0 #idx type-at '__quote quote->type = }
+  { "printf(\"" 1 #idx lift "\\n\");" ++ ++ backend-code }
+  { 1 A 2 A = }
+  { "printf(\"%d\\n\", " 1 #idx lift thunk->quote ");" ++ ++ backend-code }
+  { 1 A 1 A = }
+  { "printf(\"%d\\n\", " 1 #idx lift 1 B + thunk->quote ");" ++ ++ backend-code }
+  { drop "printf(\"???\\n\");" backend-code }
+  if
+} write
+
+{ 'hello print 4 B 1 A 2 A + 3 A * + print } finalize

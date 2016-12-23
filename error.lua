@@ -112,3 +112,14 @@ function iftooshort(n)
   stacktrace()
   os.exit(-1)
 end
+
+function stackmismatch(a, b)
+  print("STACK_MISMATCH")
+  print("first stack:")
+  rio_printstack(a)
+  print("second stack:")
+  rio_printstack(b)
+  print("")
+  stacktrace()
+  os.exit(-1)
+end
