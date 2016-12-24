@@ -21,7 +21,9 @@ rio_addcore("write", function(self)
       binding_prefixes[sanitized] = 0
       local old_prefix = binding_prefix
       binding_prefix = "__" .. sanitized .. "__"
+      local old_symboltable = rio_symboltablecopy()
       rio_invokewithtrace(self.body)
+      symboltable = old_symboltable
       binding_prefixes[sanitized] = nil
       binding_prefix = old_prefix
     end })

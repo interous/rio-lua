@@ -1,6 +1,6 @@
 rio_addcore("backend-code", function(self)
   local code = rio_pop(types["__quote"])
-  table.insert(curbody, "  " .. code.data .. "\n")
+  table.insert(curbody, indent_level[1] .. code.data .. "\n")
 end)
 
 rio_addcore("backend-include", function(self)
@@ -29,12 +29,12 @@ rio_addcore("poly", function(self)
   listpush(body, rio_strtosymbol("___quote___quote_++", rio_errorbase.file, rio_errorbase.line, rio_errorbase.col))
   listpush(body, rio_strtosymbol("eval", rio_errorbase.file, rio_errorbase.line, rio_errorbase.col))
   rio_push(rio_listtoblock(body))
-  rio_getsymbol("procedure"):eval()
+  rio_eval(rio_getsymbol("procedure"))
 end)
 
 rio_addcore("eval", function(self)
-  local quote = rio_pop(types["__quote"]).data
-  rio_getsymbol(quote):eval()
+  local quote = rio_pop(types["__quote"])
+  rio_eval(rio_strtosymbol(quote.data, rio_errorbase.file, rio_errorbase.line, rio_errorbase.col))
 end)
 
 rio_addcore("___quote___quote_++", function(self)

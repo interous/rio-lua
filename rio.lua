@@ -4,16 +4,53 @@ require "parse"
 require "error"
 
 backend = "c"
+indent_level = {""}
 
 if not arg[1] then
   print("error: no input file")
   os.exit(-1)
 end
 
--- The legendary Y-combinator, which is used for anonymous recursion.
+--[[
+  The legendary Y-combinator, which does anonymous recursion.
+  
+  The argument to Y is a unary function f, which should return a nullary
+  or unary function. The inner function then does the work, and f is an
+  anonymous function that allows recursive calls on the inner function.
+  
+  For example, you could do something like,
+  factorial = Y(function(f) return function(n)
+    if n == 0 then return 1 else return n * f(n - 1) end
+  end end)
+  factorial(5) -- returns 120
+  
+  You can handle functions of higher arity by embedding more and more
+  anonymous functions. For example,
+  print_nums = Y(function(f) return function(a) return function(b)
+    print(a .. " " .. b)
+    if a > 0 then f(a-1)(b-1) end
+  end end end)
+  print_nums(3)(6) -- prints 3 6; 2 5; 1 4; 0 3
+  
+  You can also do higher arity by having a single unary inner function
+  that takes a table argument:
+  print_nums = Y(function(f) return function(args)
+    print(args[1] .. " " .. args[2])
+    if args[1] > 0 then f{args[1]-1, args[2]-1} end
+  end end)
+  print_nums{3, 6} -- prints 3 6; 2 5; 1 4; 0 3
+  
+  Finally, embedding multiple anonymous functions can be used for
+  argument closures:
+  divmod = Y(function(f)
+    return function(c) return function(a) return function(b)
+      if a < b then return {c, a} else return f(c + 1)(a - b)(b) end
+  end end end end)(0)
+  divmod(10)(3) -- returns {3, 1}
+--]]
 function Y(f)
-  return function(...)
-    return (function(x) return x(x) end)(function(x) return f(function(y) return x(x)(y) end) end)(...)
+  return function(a)
+    return (function(x) return x(x) end)(function(x) return f(function(y) return x(x)(y) end) end)(a)
   end
 end
 
@@ -96,8 +133,7 @@ function rio_strtosymbol(s, f, l, c)
 end
 
 function rio_strtoquote(s)
-  return { ty=types["__quote"], data=s, line=l, col=c,
-    eval = function(self) rio_push(self) end }
+  return { ty=types["__quote"], data=s, eval = function(self) rio_push(self) end }
 end
 
 filestack = newlist()
@@ -110,15 +146,8 @@ curbody = {}
 
 stack = newlist()
 symboltable = {}
-backendtable = {}
-
-function rio_addbackend(name, val)
-  if backendtable[name] then
-    print("duplicate backend symbol " .. name)
-    os.exit(-1)
-  end
-  backendtable[name] = val
-end
+prefixtable = {}
+prefixtable["'"] = function(s) rio_push(s) end
 
 require ("backend_" .. backend)
 
@@ -174,6 +203,18 @@ function rio_stackcopy()
   return s
 end
 
+function rio_symboltablecopy()
+  local s = {}
+  for symbol, value in pairs(symboltable) do
+    s[symbol] = value
+  end
+  return s
+end
+
+function rio_isAtype(t)
+  return types[kinds[t]] and types[kinds[t]]:sub(1, 1) == "^"
+end
+
 function rio_stackeq(a, b)
   if a.n ~= b.n then stackmismatch(a, b) end
   local i
@@ -189,10 +230,10 @@ function rio_printstack(s)
     local output = {}
     local i
     for i = 1, s.n do
-      if types[kinds[s[i].ty]]:sub(1, 1) == "^" then
-        table.insert(output, types[kinds[s[i].ty]])
+      if rio_isAtype(s[i].ty) then
+        table.insert(output, types[s[i].ty])
       else
-        table.insert(output, types[kinds[s[i].ty]] .. " " .. tostring(s[i].data))
+        table.insert(output, types[s[i].ty] .. " " .. tostring(s[i].data))
       end
     end
     print("  " .. table.concat(output, ", "))
@@ -216,6 +257,14 @@ function rio_getsymbol(name)
   return symboltable[name]
 end
 
+function rio_eval(blob)
+  if blob.ty == types["__symbol"] and prefixtable[blob.data:sub(1, 1)] then
+    prefixtable[blob.data:sub(1, 1)](rio_strtoquote(blob.data:sub(2, -1)))
+  else
+    blob:eval()
+  end
+end
+
 function rio_requiretype(val, ty)
   if val.ty ~= ty then wrongtype(ty, val.ty) end
 end
@@ -235,6 +284,7 @@ end
 binding_prefix = ""
 binding_prefixes = {}
 
+require "core_bind"
 require "core_meta"
 require "core_resource"
 require "core_structure"
@@ -268,7 +318,7 @@ end
 function rio_flatten(block)
   local i
   for i=1,block.n do
-    block[i]:eval()
+    rio_eval(block[i])
   end
 end
 
@@ -282,7 +332,7 @@ function eval(atom)
     fd:write(backend_finalize(finalize))
     fd:close()
   else
-    atom:eval()
+    rio_eval(atom)
   end
 end
 

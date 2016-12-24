@@ -72,6 +72,7 @@ function wrongtype(expected, actual)
 end
 
 function wrongtypestr(expected, actual)
+  rio_printstack(stack)
   print("WRONG_TYPE expected " .. expected .. " got " .. types[actual])
   stacktrace()
   os.exit(-1)

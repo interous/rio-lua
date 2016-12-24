@@ -13,7 +13,9 @@ rio_addcore("procedure", function(self)
       binding_prefixes[sanitized] = 0
       local old_prefix = binding_prefix
       binding_prefix = "__" .. sanitized .. "__"
+      local old_symboltable = rio_symboltablecopy()
       rio_invokewithtrace(self.body)
+      symboltable = old_symboltable
       binding_prefixes[sanitized] = nil
       binding_prefix = old_prefix
     end })
@@ -27,14 +29,14 @@ rio_addcore("if", function(self)
   if blocks.n < 2 then iftooshort(blocks.n) end
   
   Y(function(f) return function(b)
-    rio_flatten(listpop(b))
+    rio_invokewithtrace(listpop(b))
     if rio_peek().ty == types["#b"] then
       if rio_pop(types["#b"]).data then
-        rio_flatten(listpop(b))
+        rio_invokewithtrace(listpop(b))
       else
         listpop(b)
         if b.n == 1 then
-          rio_flatten(listpop(b))
+          rio_invokewithtrace(listpop(b))
         elseif b.n > 1 then
           f(b)
         end
@@ -43,15 +45,17 @@ rio_addcore("if", function(self)
       local conditionvar = rio_pop(types["^b"]).data
       local outerbody = curbody
       curbody = {}
+      local cur_indent = indent_level[1]
+      indent_level[1] = backend_indent(indent_level[1])
       local startstack = rio_stackcopy()
-      rio_flatten(listpop(b))
+      rio_invokewithtrace(listpop(b))
       local truebody = table.concat(curbody, "")
       local truestack = rio_stackcopy()
       curbody = {}
       stack = startstack
       local falsestack
       if b.n == 1 then
-        rio_flatten(listpop(b))
+        rio_invokewithtrace(listpop(b))
         falsestack = rio_stackcopy()
       elseif b.n > 1 then
         f(b)
@@ -62,6 +66,7 @@ rio_addcore("if", function(self)
       rio_stackeq(truestack, falsestack)
       local falsebody = table.concat(curbody, "")
       curbody = outerbody
+      indent_level[1] = cur_indent
       table.insert(curbody, backend_if(conditionvar, truebody, falsebody))
     else
       wrongtypestr("#b or ^b", rio_peek().ty)
@@ -71,7 +76,8 @@ end)
 
 rio_addcore("finalize", function(self)
   local body = rio_pop(types["__block"]).data
-  rio_flatten(body)
+  indent_level[1] = "  "
+  rio_invokewithtrace(body)
   finalize = table.concat(curbody, "")
   cur_body = {}
 end)
