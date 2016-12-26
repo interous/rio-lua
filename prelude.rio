@@ -1,0 +1,4 @@
+'type { 0 #idx type-at 1 #idx lift drop } procedure
+'! { bind } prefix
+'~ { unbind } prefix
+': { rebind } prefix

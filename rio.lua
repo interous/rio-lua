@@ -125,6 +125,9 @@ function rio_listtoblock(l)
 end
 
 function rio_strtosymbol(s, f, l, c)
+  f = f or "core"
+  l = l or 0
+  c = c or 0
   return { ty=types["__symbol"], data=s, file=f, line=l, col=c,
     eval = function(self)
       rio_errorbase = { symbol=self.data, file=self.file, line=self.line, col=self.col }
@@ -146,8 +149,9 @@ curbody = {}
 
 stack = newlist()
 symboltable = {}
+bindingtable = {}
 prefixtable = {}
-prefixtable["'"] = function(s) rio_push(s) end
+prefixtable["'"] = { eval=function(self) end }
 
 require ("backend_" .. backend)
 
@@ -203,9 +207,9 @@ function rio_stackcopy()
   return s
 end
 
-function rio_symboltablecopy()
+function rio_bindingtablecopy()
   local s = {}
-  for symbol, value in pairs(symboltable) do
+  for symbol, value in pairs(bindingtable) do
     s[symbol] = value
   end
   return s
@@ -241,11 +245,26 @@ function rio_printstack(s)
 end
 
 function rio_addsymbol(name, val)
-  if symboltable[name] then alreadybound(name) end
+  if symboltable[name] or prefixtable[name] or bindingtable[binding_prefix .. name] then alreadybound(name) end
   if not val.file then val.file = rio_errorbase.file end
   if not val.line then val.line = rio_errorbase.line end
   if not val.col then val.col = rio_errorbase.col end
   symboltable[name] = val
+end
+
+function rio_addprefix(name, val)
+  if symboltable[name] or prefixtable[name] or bindingtable[binding_prefix .. name] then alreadybound(name) end
+  prefixtable[name] = val
+end
+
+function rio_addbinding(name, val)
+  if symboltable[name] or prefixtable[name] or bindingtable[binding_prefix .. name] then alreadybound(name) end
+  bindingtable[binding_prefix .. name] = val
+end
+
+function rio_deletebinding(name)
+  if not bindingtable[binding_prefix .. name] then notbound(name) end
+  bindingtable[binding_prefix .. name] = nil
 end
 
 function rio_addcore(name, f)
@@ -253,13 +272,15 @@ function rio_addcore(name, f)
 end
 
 function rio_getsymbol(name)
-  if not symboltable[name] then notbound(name) end
-  return symboltable[name]
+  if bindingtable[binding_prefix .. name] then return bindingtable[binding_prefix .. name]
+  elseif symboltable[name] then return symboltable[name]
+  else notbound(name) end
 end
 
 function rio_eval(blob)
   if blob.ty == types["__symbol"] and prefixtable[blob.data:sub(1, 1)] then
-    prefixtable[blob.data:sub(1, 1)](rio_strtoquote(blob.data:sub(2, -1)))
+    rio_push(rio_strtoquote(blob.data:sub(2, -1)))
+    prefixtable[blob.data:sub(1, 1)]:eval()
   else
     blob:eval()
   end

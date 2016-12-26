@@ -20,10 +20,14 @@ rio_addcore("write", function(self)
       end
       binding_prefixes[sanitized] = 0
       local old_prefix = binding_prefix
-      binding_prefix = "__" .. sanitized .. "__"
-      local old_symboltable = rio_symboltablecopy()
+      binding_prefix = "__" .. sanitized .. binding_prefix
+      local old_bindingtable = rio_bindingtablecopy()
       rio_invokewithtrace(self.body)
-      symboltable = old_symboltable
+      local merged_bindingtable = {}
+      for k, v in pairs(old_bindingtable) do
+        if bindingtable[k] then merged_bindingtable[k] = bindingtable[k] end
+      end
+      bindingtable = merged_bindingtable
       binding_prefixes[sanitized] = nil
       binding_prefix = old_prefix
     end })

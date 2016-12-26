@@ -108,6 +108,12 @@ function badliteral(s, outer, inner)
   os.exit(-1)
 end
 
+function invalidprefix(name)
+  print("INVALID_PREFIX " .. name .. " (must be exactly one character)")
+  stacktrace()
+  os.exit(-1)
+end
+
 function iftooshort(n)
   print("IF_TOO_SHORT need at least 2 blocks, found " .. tostring(n))
   stacktrace()

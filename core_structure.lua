@@ -1,3 +1,8 @@
+rio_addcore("import", function(self)
+  local f = rio_pop(types["__quote"]).data
+  rio_open(f)
+end)
+
 rio_addcore("procedure", function(self)
   local body = rio_pop(types["__block"])
   local name = rio_pop(types["__quote"])
@@ -12,12 +17,26 @@ rio_addcore("procedure", function(self)
       end
       binding_prefixes[sanitized] = 0
       local old_prefix = binding_prefix
-      binding_prefix = "__" .. sanitized .. "__"
-      local old_symboltable = rio_symboltablecopy()
+      binding_prefix = "__" .. sanitized .. binding_prefix
+      local old_bindingtable = rio_bindingtablecopy()
       rio_invokewithtrace(self.body)
-      symboltable = old_symboltable
+      local merged_bindingtable = {}
+      for k, v in pairs(old_bindingtable) do
+        if bindingtable[k] then merged_bindingtable[k] = bindingtable[k] end
+      end
+      bindingtable = merged_bindingtable
       binding_prefixes[sanitized] = nil
       binding_prefix = old_prefix
+    end })
+end)
+
+rio_addcore("prefix", function(self)
+  local body = rio_pop(types["__block"]).data
+  local name = rio_pop(types["__quote"]).data
+  if name:len() ~= 1 then invalidprefix(name) end
+  rio_addprefix(name, { ty=types["__procedure"], body=body,
+    name=name, eval = function(self)
+      rio_invokewithtrace(self.body)
     end })
 end)
 
@@ -77,7 +96,11 @@ end)
 rio_addcore("finalize", function(self)
   local body = rio_pop(types["__block"]).data
   indent_level[1] = "  "
+  local old_prefix = binding_prefix
+  binding_prefix = "__finalize__"
   rio_invokewithtrace(body)
+  binding_prefix = old_prefix
   finalize = table.concat(curbody, "")
   cur_body = {}
+  backend_purgescope()
 end)

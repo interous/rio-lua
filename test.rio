@@ -1,3 +1,5 @@
+'prelude.rio import
+
 'console singleton
 
 'A '^int4 unit
@@ -10,9 +12,9 @@
 'B derive=
 
 'print 'console {
-  'val bind
+  !val
   "stdio.h" backend-include
-  { val 0 #idx type-at '__quote quote->type = }
+  { val type '__quote quote->type = }
   { "printf(\"" val "\\n\");" ++ ++ backend-code }
   { val 7 B = }
   { "printf(\"%d\\n\", " val thunk->quote ");" ++ ++ backend-code }
@@ -22,4 +24,4 @@
   if
 } write
 
-{ ''hello eval print 3 B 2 A 2 A * + 'x bind x x + print 'world print } finalize
+{ ''hello eval print 3 B 2 A 2 A * + !x x x + print 5 B :x x print 'world print } finalize

@@ -1,4 +1,5 @@
 backend_included = {}
+backend_bindings = {}
 backend_types = {}
 backend_types["^int4"] = "int"
 
@@ -17,10 +18,18 @@ function backend_include(file)
   end
 end
 
-function backend_bind(n, v)
-  local sanitized = rio_sanitize(n) .. "_" .. rio_sanitize(types[v.ty])
-  local bt = backend_types[types[kinds[v.ty]]]
-  return {name=sanitized, code=bt .. " " .. sanitized .. " = " .. v.data .. ";"}
+function backend_purgescope()
+  backend_bindings = {}
+end
+
+function backend_bind(p, n, v)
+  local sanitized = p .. rio_sanitize(n) .. "_" .. rio_sanitize(types[v.ty])
+  local bt = ""
+  if not backend_bindings[sanitized] then
+    bt = backend_types[types[kinds[v.ty]]] .. " "
+  end
+  backend_bindings[sanitized] = true
+  return {name=sanitized, code=bt .. sanitized .. " = " .. v.data .. ";"}
 end
 
 function backend_if(c, t, f)
