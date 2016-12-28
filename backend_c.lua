@@ -32,6 +32,17 @@ function backend_bind(p, n, v)
   return {name=sanitized, code=bt .. sanitized .. " = " .. v.data .. ";"}
 end
 
+function backend_declare(p, n, v)
+  local sanitized = p .. rio_sanitize(n) .. "_" .. rio_sanitize(types[v.ty])
+  local bt = ""
+  if not backend_bindings[sanitized] then
+    backend_bindings[sanitized] = true
+    return {name=sanitized, code=backend_types[types[kinds[v.ty]]] .. " " .. sanitized .. ";"}
+  else
+    return {name=sanitized, code=""}
+  end
+end
+
 function backend_if(c, t, f)
   local i = indent_level[1]
   return i .. "if(" .. c .. ") {\n" .. t .. i .. "} else {\n" .. f .. i .. "}\n"
@@ -43,6 +54,10 @@ end
 
 function backend_int4_plus(a, b)
   return "(" .. a .. " + " .. b .. ")"
+end
+
+function backend_int4_minus(a, b)
+  return "(" .. a .. " - " .. b .. ")"
 end
 
 function backend_int4_times(a, b)

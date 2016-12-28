@@ -65,7 +65,11 @@ function nextatom()
       quote = quote .. c
       c = nextchar()
     end
-    return rio_strtoquote(quote)
+    if quote == "-" then
+      return rio_strtosymbol(quote, startfile, startline, startcol)
+    else
+      return rio_strtoquote(quote)
+    end
   elseif c == "\"" then
     local quote = ""
     local startfile = f.name

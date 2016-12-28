@@ -23,4 +23,5 @@ end
 prelude_addpoly("++", 2)
 prelude_addpoly("=", 2)
 prelude_addpoly("+", 2)
+prelude_addpoly("-", 2)
 prelude_addpoly("*", 2)

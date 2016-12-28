@@ -34,6 +34,27 @@ rio_addcore("derive+", function(self)
     end })
 end)
 
+rio_addcore("derive-", function(self)
+  local c = rio_pop(types["__quote"]).data
+  local b = rio_pop(types["__quote"]).data
+  local a = rio_pop(types["__quote"]).data
+  rio_requiresamekind(a, b, c)
+  local backend
+  if kinds[types[a]] == types["^int4"] then
+    f = backend_int4_minus
+  else
+    nonnumerickind(kinds[types[a]])
+  end
+  rio_addsymbol("_" .. a .. "_" .. b .. "_-", { ty=types["__derived"],
+    aty=types[a], bty=types[b], cty=types[c], f=f,
+    eval = function(self)
+      local b = rio_pop(self.bty).data
+      local a = rio_pop(self.aty).data
+      rio_push({ ty=self.cty, data=self.f(a, b),
+        eval=function(self) rio_push(self) end })
+    end })
+end)
+
 rio_addcore("derive*", function(self)
   local c = rio_pop(types["__quote"]).data
   local b = rio_pop(types["__quote"]).data

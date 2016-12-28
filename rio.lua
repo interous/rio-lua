@@ -207,9 +207,10 @@ function rio_stackcopy()
   return s
 end
 
-function rio_bindingtablecopy()
+function rio_bindingtablecopy(t)
+  if not t then t = bindingtable end
   local s = {}
-  for symbol, value in pairs(bindingtable) do
+  for symbol, value in pairs(t) do
     s[symbol] = value
   end
   return s
@@ -227,7 +228,56 @@ function rio_stackeq(a, b)
   end
 end
 
+
+function rio_makestackbindings()
+  bindings = newlist()
+  mangles = { }
+  for i = stack.n, 1, -1 do
+    local mangle = 0
+    local base_name = "__stack_" .. rio_sanitize(types[stack[i].ty])
+    local name = base_name .. mangle
+    while rio_nameinuse(name) or mangles[name] do
+      mangle = mangle + 1
+      name = base_name .. mangle
+    end
+    mangles[name] = true
+    listpush(bindings, { name=name, val=stack[i] })
+  end
+  return bindings
+end
+
+function rio_validatestackbindings(bindings)
+  local bindings_stack = newlist()
+  for i = 1, bindings.n do
+    listpush(bindings_stack, bindings[i].val)
+  end
+  if bindings.n ~= stack.n then stackmismatch(bindings_stack, stack) end
+  for i = 1, stack.n do
+    if stack[i].ty ~= bindings_stack[i].ty then stackmismatch(bindings_stack, stack) end
+    if not rio_isAtype(stack[i].ty) then
+      if stack[i].data ~= bindings_stack[i].data then
+        stackmismatch(bindings_stack, stack)
+      end
+    end
+  end
+end
+
+function rio_bindstack(bindings)
+  rio_validatestackbindings(bindings)
+  for i = 1, bindings.n do
+    rio_push(rio_strtoquote(bindings[i].name))
+    rio_getsymbol("bind"):eval()
+  end
+end
+
+function rio_unbindstack(bindings)
+  for i = bindings.n, 1, -1 do
+    rio_getsymbol(bindings[i].name):eval()
+  end
+end
+
 function rio_printstack(s)
+  if not s then s = stack end
   if s.n == 0 then
     print ("  (empty)")
   else
@@ -244,8 +294,12 @@ function rio_printstack(s)
   end
 end
 
+function rio_nameinuse(name)
+  return symboltable[name] or prefixtable[name] or bindingtable[binding_prefix .. name]
+end
+
 function rio_addsymbol(name, val)
-  if symboltable[name] or prefixtable[name] or bindingtable[binding_prefix .. name] then alreadybound(name) end
+  if rio_nameinuse(name) then alreadybound(name) end
   if not val.file then val.file = rio_errorbase.file end
   if not val.line then val.line = rio_errorbase.line end
   if not val.col then val.col = rio_errorbase.col end
@@ -253,12 +307,12 @@ function rio_addsymbol(name, val)
 end
 
 function rio_addprefix(name, val)
-  if symboltable[name] or prefixtable[name] or bindingtable[binding_prefix .. name] then alreadybound(name) end
+  if rio_nameinuse(name) then alreadybound(name) end
   prefixtable[name] = val
 end
 
 function rio_addbinding(name, val)
-  if symboltable[name] or prefixtable[name] or bindingtable[binding_prefix .. name] then alreadybound(name) end
+  if rio_nameinuse(name) then alreadybound(name) end
   bindingtable[binding_prefix .. name] = val
 end
 

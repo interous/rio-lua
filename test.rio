@@ -6,6 +6,7 @@
 'B '^int4 unit
 
 'A 'A 'A derive+
+'A 'A 'A derive-
 'B 'B 'B derive+
 'A 'A 'B derive*
 'A derive=
@@ -14,14 +15,15 @@
 'print 'console {
   !val
   "stdio.h" backend-include
-  { val type '__quote quote->type = }
-  { "printf(\"" val "\\n\");" ++ ++ backend-code }
-  { val 7 B = }
-  { "printf(\"%d\\n\", " val thunk->quote ");" ++ ++ backend-code }
-  { val 14 B = }
-  { "printf(\"%d\\n\", " val 1 B + thunk->quote ");" ++ ++ backend-code }
-  { "printf(\"???\\n\");" backend-code }
+  val
+  { val 1 A = }
+  { 1 A - }
+  { 'a 'b = }
+  { 5 A - }
+  { 6 A - }
   if
+  :val
+  "printf(\"%d\\n\", " val thunk->quote ");" ++ ++ backend-code
 } write
 
-{ ''hello eval print 3 B 2 A 2 A * + !x x x + print 5 B :x x print 'world print } finalize
+{ 1 A print 2 A print 3 A print } finalize
