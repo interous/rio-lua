@@ -130,3 +130,15 @@ function stackmismatch(a, b)
   stacktrace()
   os.exit(-1)
 end
+
+function bindingmismatch(n, a, b)
+  print("BINDING_MISMATCH " .. n)
+  if rio_isAtype(a.ty) then print("  " .. types[a.ty])
+  else print("  " .. types[a.ty] .. " " .. a.data)
+  end
+  if rio_isAtype(b.ty) then print("  " .. types[b.ty])
+  else print("  " .. types[b.ty] .. " " .. b.data)
+  end
+  stacktrace()
+  os.exit(-1)
+end

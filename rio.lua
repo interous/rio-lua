@@ -216,6 +216,17 @@ function rio_bindingtablecopy(t)
   return s
 end
 
+function rio_collapsebindings(old)
+  for k, v in pairs(bindingtable) do
+    if not old[k] then bindingtable[k] = nil
+    else
+      if old[k].ty ~= v.ty or old[k].data ~= v.data then
+        bindingmismatch(k, old[k], v)
+      end
+    end
+  end
+end
+
 function rio_isAtype(t)
   return types[kinds[t]] and types[kinds[t]]:sub(1, 1) == "^"
 end

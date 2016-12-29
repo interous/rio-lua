@@ -21,6 +21,8 @@ rio_addcore("derive+", function(self)
   local backend
   if kinds[types[a]] == types["^int4"] then
     f = backend_int4_plus
+  elseif kinds[types[a]] == types["#float8"] then
+    f = function(a, b) return a + b end
   else
     nonnumerickind(kinds[types[a]])
   end

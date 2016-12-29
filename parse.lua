@@ -60,15 +60,17 @@ function nextatom()
     orphanbrace()
   elseif c == "'" or c == "." or c == "-" or tonumber(c) then
     local quote = ""
-    if c == "'" then c = nextchar() end
+    local isquote = tonumber(c)
+    if c == "'" then isquote = true; c = nextchar() end
     while c ~= " " and c ~= "\n" and c ~= "\t" and c ~= "{" and c ~= "}" do
       quote = quote .. c
+      isquote = isquote or tonumber(c)
       c = nextchar()
     end
-    if quote == "-" then
-      return rio_strtosymbol(quote, startfile, startline, startcol)
-    else
+    if isquote then
       return rio_strtoquote(quote)
+    else
+      return rio_strtosymbol(quote, startfile, startline, startcol)
     end
   elseif c == "\"" then
     local quote = ""

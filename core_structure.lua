@@ -47,7 +47,7 @@ rio_addcore("if", function(self)
   end
   if blocks.n < 2 then iftooshort(blocks.n) end
   
-  local old_bindingtable = rio_bindingtablecopy()
+  local startbindings = rio_bindingtablecopy()
   local bindings = nil
   
   Y(function(f) return function(blocks)
@@ -72,7 +72,7 @@ rio_addcore("if", function(self)
       local cur_indent = indent_level[1]
       indent_level[1] = backend_indent(indent_level[1])
       local startstack = rio_stackcopy()
-      bindingtable = rio_bindingtablecopy(old_bindingtable)
+      rio_collapsebindings(startbindings)
       rio_invokewithtrace(listpop(blocks))
       local truestack = rio_stackcopy()
       if not bindings then
@@ -86,7 +86,7 @@ rio_addcore("if", function(self)
       local truebody = table.concat(curbody, "")
       curbody = {}
       stack = startstack
-      bindingtable = rio_bindingtablecopy(old_bindingtable)
+      rio_collapsebindings(startbindings)
       local falsestack
       if blocks.n == 1 then
         rio_invokewithtrace(listpop(blocks))
@@ -101,7 +101,6 @@ rio_addcore("if", function(self)
         stack = startstack
         rio_bindstack(bindings)
       end
-      --rio_stackeq(truestack, falsestack)
       local falsebody = table.concat(curbody, "")
       curbody = outerbody
       indent_level[1] = cur_indent
@@ -114,6 +113,50 @@ rio_addcore("if", function(self)
   end end)(blocks)
   
   if bindings then rio_unbindstack(bindings) end
+end)
+
+rio_addcore("while", function(self)
+  local body = rio_pop(types["__block"])
+  local head = rio_pop(types["__block"])
+  local outerbody = curbody
+  local startstack = rio_stackcopy()
+  local startbindings = rio_bindingtablecopy()
+  curbody = {}
+  rio_invokewithtrace(head.data)
+  local condition = rio_pop()
+  if condition.ty == types["#b"] then
+    table.insert(outerbody, table.concat(curbody, ""))
+    curbody = outerbody
+    if condition.data then
+      rio_invokewithtrace(body.data)
+      rio_push(head)
+      rio_push(body)
+      rio_getsymbol("while"):eval()
+    end
+  elseif condition.ty == types["^b"] then
+    local bindings = rio_makestackbindings()
+    local headcode = table.concat(curbody, "")
+    rio_bindstack(bindings)
+    curbody = {}
+    rio_collapsebindings(startbindings)
+    stack = rio_stackcopy(startstack)
+    local cur_indent = indent_level[1]
+    indent_level[1] = backend_indent(indent_level[1])
+    rio_invokewithtrace(body.data)
+    indent_level[1] = cur_indent
+    rio_bindstack(bindings)
+    rio_collapsebindings(startbindings)
+    local bodycode = table.concat(curbody, "")
+    stack = rio_stackcopy(startstack)
+    curbody = outerbody
+    for i = 1, bindings.n do
+      decl = backend_declare(binding_prefix, bindings[i].name, bindings[i].val)
+      table.insert(curbody, cur_indent .. decl.code .. "\n")
+    end
+    table.insert(curbody, backend_while(headcode, condition.data, bodycode))
+  else
+    wrongtypestr("#b or ^b", condition.ty)
+  end
 end)
 
 rio_addcore("finalize", function(self)

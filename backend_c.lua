@@ -48,6 +48,11 @@ function backend_if(c, t, f)
   return i .. "if(" .. c .. ") {\n" .. t .. i .. "} else {\n" .. f .. i .. "}\n"
 end
 
+function backend_while(h, c, b)
+  local i = indent_level[1]
+  return i .. "while(1) {\n" .. h .. i .. "if(!" .. c .. ") break;\n" .. b .. i .. "}\n"
+end
+
 function backend_int4(s)
   return tostring(s)
 end
@@ -66,6 +71,10 @@ end
 
 function backend_int4_equal(a, b)
   return "(" .. a .. " == " .. b .. ")"
+end
+
+function backend_int4_lt(a, b)
+  return "(" .. a .. " < " .. b .. ")"
 end
 
 function backend_binary(s)
