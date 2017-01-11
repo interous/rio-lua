@@ -120,15 +120,15 @@ function listpop(l)
 end
 
 function rio_listtoblock(l)
-  return { ty=types["__block"], data=l,
-    eval = function(self) rio_push(self) end }
+  return { ty="__block", data=l,
+    eval=function(self) rio_push(self) end }
 end
 
 function rio_strtosymbol(s, f, l, c)
   f = f or "core"
   l = l or 0
   c = c or 0
-  return { ty=types["__symbol"], data=s, file=f, line=l, col=c,
+  return { ty="__symbol", data=s, file=f, line=l, col=c,
     eval = function(self)
       rio_errorbase = { symbol=self.data, file=self.file, line=self.line, col=self.col }
       rio_getsymbol(self.data):eval()
@@ -136,7 +136,8 @@ function rio_strtosymbol(s, f, l, c)
 end
 
 function rio_strtoquote(s)
-  return { ty=types["__quote"], data=s, eval = function(self) rio_push(self) end }
+  return { ty="__quote", data=s,
+    eval=function(self) rio_push(self) end }
 end
 
 filestack = newlist()
@@ -155,30 +156,17 @@ prefixtable["'"] = { eval=function(self) end }
 
 require ("backend_" .. backend)
 
-types = newlist()
-kinds = newlist()
-literalparsers = {}
+kinds = {}
+reprs = {}
 
-function rio_addtype(ty, kind)
-  types.n = types.n + 1
-  kinds.n = kinds.n + 1
-  types[types.n] = ty
-  types[ty] = types.n
-  kinds[kinds.n] = types[kind] or 0
+function rio_addrepr(repr, kind)
+  if kinds[repr] then duplicaterepr(repr) end
+  kinds[repr] = kind
 end
 
-function rio_addcoretype(name, kind)
-  kind = kind or 0
-  rio_addtype(name, kind)
-  rio_addsymbol(name, { name=name,
-    eval = function(self) reservednoeval(self.name) end })
-end
-
-function rio_addvaltype(name, kind, parser)
-  rio_addtype(name, kind)
-  rio_addsymbol(name, { name=name,
-    eval = function(self) reservednoeval(self.name) end })
-  literalparsers[name] = parser
+function rio_addtype(ty, repr)
+  if reprs[ty] then duplicatetype(ty) end
+  reprs[ty] = repr
 end
 
 function rio_push(val)
@@ -189,18 +177,20 @@ end
 function rio_pop(ty)
   if stack.n == 0 then invalidpop() end
   if ty then rio_requiretype(stack[stack.n], ty) end
+  local res = stack[stack.n]
+  stack[stack.n] = nil
   stack.n = stack.n - 1
-  return stack[stack.n + 1]
+  return res
 end
 
-function rio_peek()
+function rio_peek(ty)
   if stack.n == 0 then invalidpop() end
+  if ty then rio_requiretype(stack[stack.n], ty) end
   return stack[stack.n]
 end
 
 function rio_stackcopy()
   local s = { n=stack.n }
-  local i
   for i = 1, stack.n do
     s[i] = stack[i]
   end
@@ -228,7 +218,7 @@ function rio_collapsebindings(old)
 end
 
 function rio_isAtype(t)
-  return types[kinds[t]] and types[kinds[t]]:sub(1, 1) == "^"
+  return reprs[t] and kinds[reprs[t]] and (kinds[reprs[t]] == "^val" or kinds[reprs[t]] == "^ref")
 end
 
 function rio_stackeq(a, b)
@@ -242,10 +232,10 @@ end
 
 function rio_makestackbindings()
   bindings = newlist()
-  mangles = { }
+  mangles = {}
   for i = stack.n, 1, -1 do
     local mangle = 0
-    local base_name = "__stack_" .. rio_sanitize(types[stack[i].ty])
+    local base_name = "__stack_" .. stack[i].ty
     local name = base_name .. mangle
     while rio_nameinuse(name) or mangles[name] do
       mangle = mangle + 1
@@ -342,15 +332,6 @@ function rio_getsymbol(name)
   else notbound(name) end
 end
 
-function rio_eval(blob)
-  if blob.ty == types["__symbol"] and prefixtable[blob.data:sub(1, 1)] then
-    rio_push(rio_strtoquote(blob.data:sub(2, -1)))
-    prefixtable[blob.data:sub(1, 1)]:eval()
-  else
-    blob:eval()
-  end
-end
-
 function rio_requiretype(val, ty)
   if val.ty ~= ty then wrongtype(ty, val.ty) end
 end
@@ -408,8 +389,8 @@ function rio_flatten(block)
   end
 end
 
-function eval(atom)
-  if atom.ty == types["__parse-end"] then
+function rio_eval(blob)
+  if not blob then
     local fd = assert(io.open(string.sub(arg[1], 1, -4) .. backend, "w"))
     fd:write(table.concat(preamble, ""))
     fd:write("\n")
@@ -417,11 +398,14 @@ function eval(atom)
     fd:write("\n")
     fd:write(backend_finalize(finalize))
     fd:close()
+  elseif blob.ty == types["__symbol"] and prefixtable[blob.data:sub(1, 1)] then
+    rio_push(rio_strtoquote(blob.data:sub(2, -1)))
+    prefixtable[blob.data:sub(1, 1)]:eval()
   else
-    rio_eval(atom)
+    blob:eval()
   end
 end
 
 while filestack.n > 0 do
-  eval(nextatom())
+  rio_eval(nextatom())
 end

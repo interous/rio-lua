@@ -41,6 +41,18 @@ function reservednoeval(name)
   os.exit(-1)
 end
 
+function duplicatetype(name)
+  print("DUPLICATE_TYPE " .. name)
+  stacktrace()
+  os.exit(-1)
+end
+
+function duplicaterepr(name)
+  print("DUPLICATE_REPRESENTATION " .. name)
+  stacktrace()
+  os.exit(-1)
+end
+
 function invalidpop()
   print("POP_WITH_EMPTY_STACK")
   stacktrace()

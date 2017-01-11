@@ -1,8 +1,3 @@
-PARSE_BLOCK = 0
-PARSE_QUOTE = 1
-PARSE_TOKEN = 2
-PARSE_END = 3
-
 function curchar()
   local f = filestack[filestack.n]
   return string.sub(f.data, f.pos, f.pos)
@@ -29,7 +24,7 @@ function nextatom()
   if c == "" then
     rio_close()
     if filestack.n == 0 then
-      return { ty=types["__parse-end"] }
+      return nil
     else
       return nextatom()
     end
