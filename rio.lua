@@ -286,9 +286,9 @@ function rio_printstack(s)
     local i
     for i = 1, s.n do
       if rio_isAtype(s[i].ty) then
-        table.insert(output, types[s[i].ty])
+        table.insert(output, s[i].ty)
       else
-        table.insert(output, types[s[i].ty] .. " " .. tostring(s[i].data))
+        table.insert(output, s[i].ty .. " " .. tostring(s[i].data))
       end
     end
     print("  " .. table.concat(output, ", "))
@@ -323,7 +323,7 @@ function rio_deletebinding(name)
 end
 
 function rio_addcore(name, f)
-  rio_addsymbol(name, { ty=types["__core"], eval = f })
+  rio_addsymbol(name, { ty="__core", eval=f })
 end
 
 function rio_getsymbol(name)
@@ -340,12 +340,12 @@ function rio_requirekind(val, kind)
   if val ~= kind then wrongkind(kind, val) end
 end
 
-function rio_requiresamekind(a, b, c)
-  if not types[a] then notatype(a) end
-  if not types[b] then notatype(b) end
-  if not types[c] then notatype(c) end
-  if kinds[types[a]] ~= kinds[types[b]] then kindmismatch(kinds[types[a]], kinds[types[b]]) end
-  if kinds[types[b]] ~= kinds[types[c]] then kindmismatch(kinds[types[b]], kinds[types[c]]) end
+function rio_requiresamerepr(a, b, c)
+  if not reprs[a] then notatype(a) end
+  if not reprs[b] then notatype(b) end
+  if not reprs[c] then notatype(c) end
+  if reprs[a] ~= reprs[b] then kindmismatch(reprs[a], reprs[b]) end
+  if reprs[b] ~= reprs[c] then kindmismatch(reprs[b], reprs[c]) end
 end
 
 binding_prefix = ""
@@ -356,21 +356,6 @@ require "core_meta"
 require "core_resource"
 require "core_structure"
 require "core_type"
-
-rio_addcoretype("__core")
-rio_addcoretype("__type")
-rio_addcoretype("__parse-end")
-rio_addcoretype("__symbol")
-rio_addcoretype("__quote")
-rio_addcoretype("__block")
-rio_addcoretype("__procedure")
-rio_addcoretype("__derived")
-rio_addcoretype("__constructor")
-rio_addcoretype("__resource")
-rio_addcoretype("__resource-write")
-rio_addcoretype("__#val", "__type")
-rio_addcoretype("__^val", "__type")
-
 require "core_numerics"
 require "core_binary"
 

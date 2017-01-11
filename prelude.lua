@@ -1,21 +1,17 @@
-rio_push({ ty=types["__quote"], data="#idx" })
-rio_push({ ty=types["__quote"], data="#float8" })
+rio_push(rio_strtoquote("#idx"))
+rio_push(rio_strtoquote"#float8"))
 rio_getsymbol("unit"):eval()
 
-rio_push({ ty=types["__quote"], data="#arity" })
-rio_push({ ty=types["__quote"], data="#float8" })
+rio_push(rio_strtoquote("#arity"))
+rio_push(rio_strtoquote("#float8"))
 rio_getsymbol("unit"):eval()
 
-rio_push({ ty=types["__quote"], data="#b" })
-rio_push({ ty=types["__quote"], data="#binary" })
-rio_getsymbol("unit"):eval()
-
-rio_push({ ty=types["__quote"], data="^b" })
-rio_push({ ty=types["__quote"], data="^binary" })
+rio_push(rio_strtoquote("#b"))
+rio_push(rio_strtoquote("#binary"))
 rio_getsymbol("unit"):eval()
 
 function prelude_addpoly(s, a)
-  rio_push({ ty=types["__quote"], data=s })
+  rio_push(rio_strtoquote(s))
   rio_push({ ty=types["#arity"], data=a })
   rio_getsymbol("poly"):eval()
 end
