@@ -1,5 +1,15 @@
 'prelude.rio import
 
+'^int4 '^val add-repr
+'^int4 {} macro
+'_^int4_declare {
+  "int " swap ";" ++ ++ backend-code
+} macro
+'_^int4_bind {
+  !name !val
+  name " = " val ";" ++ ++ ++ backend-code
+} macro
+
 'console singleton
 
 'A '^int4 unit
@@ -9,30 +19,12 @@
 'A 'A 'A derive-
 'B 'B 'B derive+
 'A 'A 'B derive*
-'A derive=
-'B derive=
-'A derive<
-'#idx derive<
-'#idx '#idx '#idx derive+
 
 'print 'console {
   !val
-  "stdio.h" backend-include
-  val
-  { val 1 A = }
-    { 1 A - }
-  { 'a 'b = }
-    { 5 A - }
-    { 6 A - }
-  if
-  :val
+  "#include <stdio.h>" backend-include
   "printf(\"%d\\n\", " val thunk->quote ");" ++ ++ backend-code
 } write
 
-{ 10 A !count
-  0 A !i
-  { i count < }
-  { i print
-    i 1 A + :i
-  } while
+{ 10 A print
 } finalize

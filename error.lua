@@ -78,26 +78,32 @@ function notbound(name)
 end
 
 function wrongtype(expected, actual)
-  print("WRONG_TYPE expected " .. types[expected] .. " got " .. types[actual])
+  print("WRONG_TYPE expected " .. expected .. " got " .. actual)
   stacktrace()
   os.exit(-1)
 end
 
-function wrongtypestr(expected, actual)
+function wrongrepr(expected, actual)
   rio_printstack(stack)
-  print("WRONG_TYPE expected " .. expected .. " got " .. types[actual])
+  print("WRONG_REPR expected " .. expected .. " got " .. actual)
   stacktrace()
   os.exit(-1)
 end
 
 function wrongkind(expected, actual)
-  print("WRONG_KIND expected " .. types[expected] .. " got " .. types[actual])
+  print("WRONG_KIND expected " .. expected .. " got " .. actual)
+  stacktrace()
+  os.exit(-1)
+end
+
+function reprmismatch(a, b)
+  print("REPR_MISMATCH " .. a .. " " .. b)
   stacktrace()
   os.exit(-1)
 end
 
 function kindmismatch(a, b)
-  print("KIND_MISMATCH " .. types[a] .. " " .. types[b])
+  print("KIND_MISMATCH " .. a .. " " .. b)
   stacktrace()
   os.exit(-1)
 end
@@ -108,14 +114,20 @@ function notatype(name)
   os.exit(-1)
 end
 
-function nonnumerickind(name)
-  print("NON_NUMERIC_KIND " .. types[name])
+function notarepr(name)
+  print("NOT_A_REPR " .. name)
   stacktrace()
   os.exit(-1)
 end
 
-function badliteral(s, outer, inner)
-  print("BAD_LITERAL " .. s .. " couldn't be parsed as " .. outer .. " (i.e., " .. inner .. ")")
+function nonnumerickind(name)
+  print("NON_NUMERIC_KIND " .. name)
+  stacktrace()
+  os.exit(-1)
+end
+
+function badliteral(s, ty)
+  print("BAD_LITERAL " .. s .. " couldn't be parsed as " .. ty)
   stacktrace()
   os.exit(-1)
 end
@@ -145,11 +157,11 @@ end
 
 function bindingmismatch(n, a, b)
   print("BINDING_MISMATCH " .. n)
-  if rio_isAtype(a.ty) then print("  " .. types[a.ty])
-  else print("  " .. types[a.ty] .. " " .. a.data)
+  if rio_isAtype(a.ty) then print("  " .. a.ty)
+  else print("  " .. a.ty .. " " .. a.data)
   end
-  if rio_isAtype(b.ty) then print("  " .. types[b.ty])
-  else print("  " .. types[b.ty] .. " " .. b.data)
+  if rio_isAtype(b.ty) then print("  " .. b.ty)
+  else print("  " .. b.ty .. " " .. b.data)
   end
   stacktrace()
   os.exit(-1)

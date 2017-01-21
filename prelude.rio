@@ -1,4 +1,120 @@
-'type { 0 #idx type-at 1 #idx lift drop } procedure
 '! { bind } prefix
-'~ { unbind } prefix
+'@ { commit } prefix
+'~ { delete } prefix
+
+'rebind {
+  dup delete bind
+} inline
+
+'recommit {
+  dup delete commit
+} inline
+
 ': { rebind } prefix
+'; { recommit } prefix
+
+'unit {
+  !repr !type
+  type repr add-type
+  type {}
+  repr symbol block-push
+  type block-push
+  'unsafe-set-type symbol block-push
+  macro
+} macro
+
+'#idx '#float8 unit
+
+'#bc '#binary unit
+
+'_#idx_#idx_> {
+  '#float8 1 #idx unsafe-set-type-at
+  '#float8 0 #idx unsafe-set-type-at
+  _#float8_#float8_>
+  '#bc 0 #idx unsafe-set-type-at
+} macro
+
+'_#idx_#idx_>= {
+  '#float8 1 #idx unsafe-set-type-at
+  '#float8 0 #idx unsafe-set-type-at
+  _#float8_#float8_>=
+  '#bc 0 #idx unsafe-set-type-at
+} macro
+
+'_#idx_#idx_- {
+  '#float8 1 #idx unsafe-set-type-at
+  '#float8 0 #idx unsafe-set-type-at
+  _#float8_#float8_-
+  '#idx 0 #idx unsafe-set-type-at
+} macro
+
+'poly {
+  !i !f
+  f { '_ }
+  { i 0 #idx _#idx_#idx_> }
+  { i block-push
+    'type-at symbol block-push
+    '___quote___quote_++ symbol block-push
+    '_ block-push
+    '___quote___quote_++ symbol block-push
+    i 1 #idx _#idx_#idx_- :i
+  } while
+  f block-push
+  '___quote___quote_++ symbol block-push
+  'eval symbol block-push
+  macro
+} macro
+
+'+ 2 #idx poly '- 2 #idx poly '* 2 #idx poly '/ 2 #idx poly
+'= 2 #idx poly '/= 2 #idx poly
+'< 2 #idx poly '<= 2 #idx poly '> 2 #idx poly '>= 2 #idx poly
+'and 2 #idx poly 'or 2 #idx poly 'not 1 #idx poly
+'++ 2 #idx poly
+
+'derive {
+  !f 1 #idx - !i !res
+  "" !name {} !body
+  { i 0 #idx >= }
+  { i lift !cur
+    name '_ cur ++ ++ :name
+    body
+      cur repr-of block-push
+      i block-push
+      'unsafe-set-type-at symbol block-push
+    :body
+    i 1 #idx - :i
+  } while
+  name '_ f ++ ++
+  body
+    f symbol block-push
+    0 #idx block-push
+    res block-push
+    'unsafe-set-type-at symbol block-push
+  macro
+} macro
+
+'derive+ { 2 #idx '+ derive } macro
+'derive- { 2 #idx '- derive } macro
+'derive* { 2 #idx '* derive } macro
+'derive/ { 2 #idx '/ derive } macro
+'derive= { 2 #idx '= derive } macro
+'derive/= { 2 #idx '/= derive } macro
+'derive< { 2 #idx '< derive } macro
+'derive<= { 2 #idx '<= derive } macro
+'derive> { 2 #idx '> derive } macro
+'derive>= { 2 #idx '>= derive } macro
+'derive-and { 2 #idx 'and derive } macro
+'derive-or { 2 #idx 'or derive } macro
+'derive-not { 1 #idx 'not derive } macro
+'derive++ { 2 #idx '++ derive } macro
+
+'#idx '#idx '#idx derive+
+'#idx '#idx '#idx derive* '#idx '#idx '#idx derive/
+'#idx '#idx '#bc derive= '#idx '#idx '#bc derive/=
+'#idx '#idx '#bc derive< '#idx '#idx '#bc derive<=
+
+'#bc '#bc '#bc derive= '#bc '#bc '#bc derive/=
+'#bc '#bc '#bc derive-and '#bc '#bc '#bc derive-or
+'#bc '#bc '#bc derive-not
+
+'swap { 1 #idx lift } macro

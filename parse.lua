@@ -49,8 +49,8 @@ function nextatom()
       end
     end
     nextchar()
-    return { ty=types["__block"], data=block,
-      eval = function(self) rio_push(self) end }
+    return { ty="__block", data=block,
+      eval = function(self) rio_push(rio_listtoblock(listcopy(self.data))) end }
   elseif c == "}" then
     orphanbrace()
   elseif c == "'" or c == "." or c == "-" or tonumber(c) then

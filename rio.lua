@@ -119,9 +119,26 @@ function listpop(l)
   return e
 end
 
+function listcopy(l)
+  local c = newlist()
+  c.n = l.n
+  for i=1,l.n do
+    c[i] = l[i]
+  end
+  return c
+end
+
+function tablecopy(t)
+  local c = {}
+  for k,v in pairs(t) do
+    c[k] = v
+  end
+  return c
+end
+
 function rio_listtoblock(l)
   return { ty="__block", data=l,
-    eval=function(self) rio_push(self) end }
+    eval=function(self) rio_push(rio_listtoblock(listcopy(self.data))) end }
 end
 
 function rio_strtosymbol(s, f, l, c)
@@ -143,12 +160,14 @@ end
 filestack = newlist()
 callstack = newlist()
 rio_open(arg[1])
+includes = {}
 preamble = {}
 body = {}
 finalize = nil
 curbody = {}
 
 stack = newlist()
+declarationtable = {}
 symboltable = {}
 bindingtable = {}
 prefixtable = {}
@@ -206,6 +225,12 @@ function rio_bindingtablecopy(t)
   return s
 end
 
+function rio_deletenewbindings(old)
+  for k,v in pairs(bindingtable) do
+    if not old[k] then bindingtable[k] = nil end
+  end
+end
+
 function rio_collapsebindings(old)
   for k, v in pairs(bindingtable) do
     if not old[k] then bindingtable[k] = nil
@@ -228,7 +253,6 @@ function rio_stackeq(a, b)
     if a[i].ty ~= b[i].ty or a[i].data ~= b[i].data then stackmismatch(a, b) end
   end
 end
-
 
 function rio_makestackbindings()
   bindings = newlist()
@@ -359,16 +383,35 @@ require "core_type"
 require "core_numerics"
 require "core_binary"
 
-require "prelude"
-
 function rio_invokewithtrace(block)
   listpush(rio_errorstack, rio_errorbase)
   rio_flatten(block)
   listpop(rio_errorstack)
 end
 
+function rio_invokeasmacro(name, body)
+  local base_sanitized = rio_sanitize(name)
+  local sanitized = base_sanitized
+  local mangle = 0
+  while binding_prefixes[sanitized] do
+    sanitized = base_sanitized .. mangle
+    mangle = mangle + 1
+  end
+  binding_prefixes[sanitized] = 0
+  local old_prefix = binding_prefix
+  binding_prefix = "__" .. sanitized .. binding_prefix
+  local old_bindingtable = rio_bindingtablecopy()
+  rio_invokewithtrace(body)
+  local merged_bindingtable = {}
+  for k, v in pairs(old_bindingtable) do
+    if bindingtable[k] then merged_bindingtable[k] = bindingtable[k] end
+  end
+  bindingtable = merged_bindingtable
+  binding_prefixes[sanitized] = nil
+  binding_prefix = old_prefix
+end
+
 function rio_flatten(block)
-  local i
   for i=1,block.n do
     rio_eval(block[i])
   end
@@ -383,7 +426,7 @@ function rio_eval(blob)
     fd:write("\n")
     fd:write(backend_finalize(finalize))
     fd:close()
-  elseif blob.ty == types["__symbol"] and prefixtable[blob.data:sub(1, 1)] then
+  elseif blob.ty == "__symbol" and prefixtable[blob.data:sub(1, 1)] then
     rio_push(rio_strtoquote(blob.data:sub(2, -1)))
     prefixtable[blob.data:sub(1, 1)]:eval()
   else

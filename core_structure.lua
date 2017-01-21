@@ -1,40 +1,31 @@
 rio_addcore("import", function(self)
-  local f = rio_pop(types["__quote"]).data
+  local f = rio_pop("__quote").data
   rio_open(f)
 end)
 
-rio_addcore("procedure", function(self)
-  local body = rio_pop(types["__block"])
-  local name = rio_pop(types["__quote"])
-  rio_addsymbol(name.data, { ty=types["__procedure"], body=body.data,
-    name=name.data, eval = function(self)
-      local base_sanitized = rio_sanitize(self.name)
-      local sanitized = base_sanitized
-      local mangle = 0
-      while binding_prefixes[sanitized] do
-        sanitized = base_sanitized .. mangle
-        mangle = mangle + 1
-      end
-      binding_prefixes[sanitized] = 0
-      local old_prefix = binding_prefix
-      binding_prefix = "__" .. sanitized .. binding_prefix
-      local old_bindingtable = rio_bindingtablecopy()
+rio_addcore("macro", function(self)
+  local body = rio_pop("__block").data
+  local name = rio_pop("__quote").data
+  rio_addsymbol(name, { ty="__macro", body=body,
+    name=name, eval = function(self)
+      rio_invokeasmacro(self.name, self.body)
+    end })
+end)
+
+rio_addcore("inline", function(self)
+  local body = rio_pop("__block").data
+  local name = rio_pop("__quote").data
+  rio_addsymbol(name, { ty="__macro", body=body,
+    name=name, eval = function(self)
       rio_invokewithtrace(self.body)
-      local merged_bindingtable = {}
-      for k, v in pairs(old_bindingtable) do
-        if bindingtable[k] then merged_bindingtable[k] = bindingtable[k] end
-      end
-      bindingtable = merged_bindingtable
-      binding_prefixes[sanitized] = nil
-      binding_prefix = old_prefix
     end })
 end)
 
 rio_addcore("prefix", function(self)
-  local body = rio_pop(types["__block"]).data
-  local name = rio_pop(types["__quote"]).data
+  local body = rio_pop("__block").data
+  local name = rio_pop("__quote").data
   if name:len() ~= 1 then invalidprefix(name) end
-  rio_addprefix(name, { ty=types["__procedure"], body=body,
+  rio_addprefix(name, { ty="__macro", body=body,
     name=name, eval = function(self)
       rio_invokewithtrace(self.body)
     end })
@@ -42,8 +33,8 @@ end)
 
 rio_addcore("if", function(self)
   local blocks = newlist()
-  while stack.n > 0 and rio_peek().ty == types["__block"] do
-    listpush(blocks, rio_pop(types["__block"]).data)
+  while stack.n > 0 and rio_peek().ty == "__block" do
+    listpush(blocks, rio_pop("__block").data)
   end
   if blocks.n < 2 then iftooshort(blocks.n) end
   
@@ -52,20 +43,22 @@ rio_addcore("if", function(self)
   
   Y(function(f) return function(blocks)
     rio_invokewithtrace(listpop(blocks))
-    if rio_peek().ty == types["#b"] then
-      if rio_pop(types["#b"]).data then
+    if not reprs[rio_peek().ty] then
+      wrongkind("#val or ^val", rio_peek().ty)
+    elseif reprs[rio_peek().ty] == "#binary" then
+      if rio_pop().data then
         rio_invokewithtrace(listpop(blocks))
       else
         listpop(blocks)
         if blocks.n == 1 then
           rio_invokewithtrace(listpop(blocks))
         elseif blocks.n > 1 then
-          return f(blocks)
+          f(blocks)
         end
       end
       return false
-    elseif rio_peek().ty == types["^b"] then
-      local conditionvar = rio_pop(types["^b"]).data
+    elseif reprs[rio_peek().ty] == "^binary" then
+      local conditionvar = rio_pop().data
       local outerbody = curbody
       curbody = {}
       local declbody = {}
@@ -108,7 +101,7 @@ rio_addcore("if", function(self)
       table.insert(curbody, backend_if(conditionvar, truebody, falsebody))
       return true
     else
-      wrongtypestr("#b or ^b", rio_peek().ty)
+      wrongrepr("#binary or ^binary", reprs[rio_peek().ty])
     end
   end end)(blocks)
   
@@ -116,24 +109,27 @@ rio_addcore("if", function(self)
 end)
 
 rio_addcore("while", function(self)
-  local body = rio_pop(types["__block"])
-  local head = rio_pop(types["__block"])
+  local body = rio_pop("__block").data
+  local head = rio_pop("__block").data
   local outerbody = curbody
   local startstack = rio_stackcopy()
   local startbindings = rio_bindingtablecopy()
   curbody = {}
-  rio_invokewithtrace(head.data)
+  rio_invokewithtrace(head)
   local condition = rio_pop()
-  if condition.ty == types["#b"] then
+  if not reprs[condition.ty] then
+    wrongkind("#val or ^val", condition.ty)
+  elseif reprs[condition.ty] == "#binary" then
     table.insert(outerbody, table.concat(curbody, ""))
     curbody = outerbody
     if condition.data then
-      rio_invokewithtrace(body.data)
-      rio_push(head)
-      rio_push(body)
+      rio_invokewithtrace(body)
+      rio_push(rio_listtoblock(head))
+      rio_push(rio_listtoblock(body))
+      rio_deletenewbindings(startbindings)
       rio_getsymbol("while"):eval()
     end
-  elseif condition.ty == types["^b"] then
+  elseif reprs[condition.ty] == "^binary" then
     local bindings = rio_makestackbindings()
     local headcode = table.concat(curbody, "")
     rio_bindstack(bindings)
@@ -142,7 +138,7 @@ rio_addcore("while", function(self)
     stack = rio_stackcopy(startstack)
     local cur_indent = indent_level[1]
     indent_level[1] = backend_indent(indent_level[1])
-    rio_invokewithtrace(body.data)
+    rio_invokewithtrace(body)
     indent_level[1] = cur_indent
     rio_bindstack(bindings)
     rio_collapsebindings(startbindings)
@@ -155,12 +151,12 @@ rio_addcore("while", function(self)
     end
     table.insert(curbody, backend_while(headcode, condition.data, bodycode))
   else
-    wrongtypestr("#b or ^b", condition.ty)
+    wrongtype("#binary or ^binary", condition.ty)
   end
 end)
 
 rio_addcore("finalize", function(self)
-  local body = rio_pop(types["__block"]).data
+  local body = rio_pop("__block").data
   indent_level[1] = "  "
   local old_prefix = binding_prefix
   binding_prefix = "__finalize__"

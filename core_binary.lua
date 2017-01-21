@@ -1,51 +1,34 @@
 rio_addrepr("#binary", "#val")
-rio_addtype("#bc", "#binary")
-rio_addcore("#t", function(self)
-  rio_push({ ty="#bc", data=true,
-    eval=function(self) rio_push(self) end })
-end)
-rio_addcore("#f", function(self)
-  rio_push({ ty="#bc", data=false,
+rio_addcore("#binary", function(self)
+  local s = rio_pop("__quote").data
+  local parsed = nil
+  if s == "0" then parsed = false elseif s == "1" then parsed = true end
+  if not parsed then badliteral(s, ty) end
+  rio_push({ ty="#binary", data=parsed,
     eval=function(self) rio_push(self) end })
 end)
 
-rio_addcore("derive=", function(self)
-  local ty = rio_pop(types["__quote"]).data
-  local f, r
-  if kinds[types[ty]] == types["^int4"] then
-    f = backend_int4_equal
-    r = types["^b"]
-  else
-    nonnumerickind(kinds[types[ty]])
-  end
-  rio_addsymbol("_" .. ty .. "_" .. ty .. "_=", { ty=types["__derived"],
-    ty=types[ty], f=f, r=r,
-    eval = function(self)
-      local b = rio_pop(self.ty).data
-      local a = rio_pop(self.ty).data
-      rio_push({ ty=self.r, data=self.f(a, b),
-        eval=function(self) rio_push(self) end })
-    end })
+rio_addcore("_#binary_#binary_=", function(self)
+  rio_push({ ty="#binary", data=rio_pop().data == rio_pop().data,
+    eval=function(self) rio_push(self) end })
 end)
 
-rio_addcore("derive<", function(self)
-  local ty = rio_pop(types["__quote"]).data
-  local f, r
-  if kinds[types[ty]] == types["^int4"] then
-    f = backend_int4_lt
-    r = types["^b"]
-  elseif kinds[types[ty]] == types["#float8"] then
-    f = function(a, b) return a < b end
-    r = types["#b"]
-  else
-    nonnumerickind(kinds[types[ty]])
-  end
-  rio_addsymbol("_" .. ty .. "_" .. ty .. "_<", { ty=types["__derived"],
-    ty=types[ty], f=f, r=r,
-    eval = function(self)
-      local b = rio_pop(self.ty).data
-      local a = rio_pop(self.ty).data
-      rio_push({ ty=self.r, data=self.f(a, b),
-        eval=function(self) rio_push(self) end })
-    end })
+rio_addcore("_#binary_#binary_/=", function(self)
+  rio_push({ ty="#binary", data=rio_pop().data ~= rio_pop().data,
+    eval=function(self) rio_push(self) end })
+end)
+
+rio_addcore("_#binary_#binary_and", function(self)
+  rio_push({ ty="#binary", data=rio_pop().data and rio_pop().data,
+    eval=function(self) rio_push(self) end })
+end)
+
+rio_addcore("_#binary_#binary_or", function(self)
+  rio_push({ ty="#binary", data=rio_pop().data or rio_pop().data,
+    eval=function(self) rio_push(self) end })
+end)
+
+rio_addcore("_#binary_not", function(self)
+  rio_push({ ty="#binary", data=not rio_pop().data,
+    eval=function(self) rio_push(self) end })
 end)
