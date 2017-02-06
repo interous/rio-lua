@@ -87,8 +87,8 @@
   name '_ f ++ ++
   body
     f symbol block-push
-    0 #idx block-push
     res block-push
+    0 #idx block-push
     'unsafe-set-type-at symbol block-push
   macro
 } macro

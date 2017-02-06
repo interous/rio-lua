@@ -5,12 +5,12 @@ rio_addcore("commit", function(self)
     local backend_name = binding_prefix .. rio_sanitize(name) .. "_" .. rio_sanitize(datum.ty)
     if not declarationtable[name] then
       rio_push(rio_strtoquote(backend_name))
-      rio_eval(rio_getsymbol("_" .. datum.ty .. "_declare"))
+      rio_eval(rio_getsymbol("_" .. reprs[datum.ty] .. "_declare"))
       declarationtable[name] = true
     end
     rio_push(rio_strtoquote(backend_name))
     rio_push(datum)
-    rio_eval(rio_getsymbol("_" .. datum.ty .. "_bind"))
+    rio_eval(rio_getsymbol("_" .. reprs[datum.ty] .. "_commit"))
     rio_addbinding(name, { ty=datum.ty, data=backend_name,
       aliases={name=true}, eval=function(self) rio_push(self) end })
   else

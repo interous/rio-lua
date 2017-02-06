@@ -163,8 +163,10 @@ rio_open(arg[1])
 includes = {}
 preamble = {}
 body = {}
-finalize = nil
+finalize_decls = nil
+finalize_body = nil
 curbody = {}
+curdecls = {}
 
 stack = newlist()
 declarationtable = {}
@@ -424,7 +426,10 @@ function rio_eval(blob)
     fd:write("\n")
     fd:write(table.concat(body, ""))
     fd:write("\n")
-    fd:write(backend_finalize(finalize))
+    rio_push(rio_strtoquote(finalize_decls))
+    rio_push(rio_strtoquote(finalize_body))
+    rio_eval(rio_getsymbol("backend-finalize"))
+    fd:write(rio_pop("__quote").data)
     fd:close()
   elseif blob.ty == "__symbol" and prefixtable[blob.data:sub(1, 1)] then
     rio_push(rio_strtoquote(blob.data:sub(2, -1)))

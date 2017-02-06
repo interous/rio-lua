@@ -84,13 +84,14 @@ function wrongtype(expected, actual)
 end
 
 function wrongrepr(expected, actual)
-  rio_printstack(stack)
+  actual = actual or "(unknown)"
   print("WRONG_REPR expected " .. expected .. " got " .. actual)
   stacktrace()
   os.exit(-1)
 end
 
 function wrongkind(expected, actual)
+  actual = actual or "(unknown)"
   print("WRONG_KIND expected " .. expected .. " got " .. actual)
   stacktrace()
   os.exit(-1)

@@ -162,7 +162,9 @@ rio_addcore("finalize", function(self)
   binding_prefix = "__finalize__"
   rio_invokewithtrace(body)
   binding_prefix = old_prefix
-  finalize = table.concat(curbody, "")
-  cur_body = {}
+  finalize_decls = table.concat(curdecls, "")
+  finalize_body = table.concat(curbody, "")
+  curdecls = {}
+  curbody = {}
   backend_purgescope()
 end)

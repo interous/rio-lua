@@ -3,11 +3,20 @@
 '^int4 '^val add-repr
 '^int4 {} macro
 '_^int4_declare {
-  "int " swap ";" ++ ++ backend-code
+  "int " swap ";" ++ ++ backend-declare
 } macro
-'_^int4_bind {
-  !name !val
-  name " = " val ";" ++ ++ ++ backend-code
+'_^int4_commit {
+  !val !name
+  name " = " val thunk->quote ";" ++ ++ ++ backend-code
+} macro
+'_^int4_^int4_+ {
+  thunk->quote !b thunk->quote !a
+  "(" a " + " b ")" ++ ++ ++ ++
+} macro
+
+'backend-finalize {
+  !body !decls
+  "int main(int __argv, char** __argc) {\n" decls body "  return 1;\n}\n" ++ ++ ++
 } macro
 
 'console singleton
@@ -21,10 +30,10 @@
 'A 'A 'B derive*
 
 'print 'console {
-  !val
+  @val
   "#include <stdio.h>" backend-include
   "printf(\"%d\\n\", " val thunk->quote ");" ++ ++ backend-code
 } write
 
-{ 10 A print
+{ 10 A 20 A + 30 A + print
 } finalize

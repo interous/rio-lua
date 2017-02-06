@@ -3,6 +3,11 @@ rio_addcore("backend-code", function(self)
   table.insert(curbody, indent_level[1] .. code .. "\n")
 end)
 
+rio_addcore("backend-declare", function(self)
+  local decl = rio_pop("__quote").data
+  table.insert(curdecls, indent_level[1] .. decl .. "\n")
+end)
+
 rio_addcore("backend-include", function(self)
   local file = rio_pop("__quote").data
   if not includes[file] then
@@ -125,6 +130,7 @@ end)
 
 rio_addcore("thunk->quote", function(self)
   local thunk = rio_pop()
-  rio_requirekind(kinds[reprs[thunk.ty]], "^val")
+  local kind = kinds[thunk.ty] or kinds[reprs[thunk.ty]]
+  rio_requirekind(kind, "^val")
   rio_push(rio_strtoquote(tostring(thunk.data)))
 end)
