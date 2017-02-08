@@ -1,5 +1,5 @@
 function rio_addEnumeric(ty)
-  rio_addrepr(ty, "#val")
+  rio_addtype(ty)
   rio_addcore(ty, function(self)
     local s = rio_pop("__quote").data
     local parsed = tonumber(s)
@@ -7,81 +7,83 @@ function rio_addEnumeric(ty)
     rio_push({ ty=ty, data=parsed,
       eval=function(self) rio_push(self) end })
   end)
+  
+  local namebase = "_" .. ty .. "_" .. ty .. "_"
+  
+  rio_addcore(namebase .. "+", function(self)
+    local b = rio_pop(ty).data
+    local a = rio_pop(ty).data
+    rio_push({ ty=ty, data=a+b,
+      eval=function(self) rio_push(self) end })
+  end)
+
+  rio_addcore(namebase .. "-", function(self)
+    local b = rio_pop(ty).data
+    local a = rio_pop(ty).data
+    rio_push({ ty=ty, data=a-b,
+      eval=function(self) rio_push(self) end })
+  end)
+
+  rio_addcore(namebase .. "*", function(self)
+    local b = rio_pop(ty).data
+    local a = rio_pop(ty).data
+    rio_push({ ty=ty, data=a*b,
+      eval=function(self) rio_push(self) end })
+  end)
+
+  rio_addcore(namebase .. "/", function(self)
+    local b = rio_pop(ty).data
+    local a = rio_pop(ty).data
+    rio_push({ ty=ty, data=a/b,
+      eval=function(self) rio_push(self) end })
+  end)
+
+  rio_addcore(namebase .. "=", function(self)
+    local b = rio_pop(ty).data
+    local a = rio_pop(ty).data
+    rio_push({ ty="#binary", data=a==b,
+      eval=function(self) rio_push(self) end })
+  end)
+
+  rio_addcore(namebase .. "/=", function(self)
+    local b = rio_pop(ty).data
+    local a = rio_pop(ty).data
+    rio_push({ ty="#binary", data=a~=b,
+      eval=function(self) rio_push(self) end })
+  end)
+
+  rio_addcore(namebase .. "<", function(self)
+    local b = rio_pop(ty).data
+    local a = rio_pop(ty).data
+    rio_push({ ty="#binary", data=a<b,
+      eval=function(self) rio_push(self) end })
+  end)
+
+  rio_addcore(namebase .. "<=", function(self)
+    local b = rio_pop(ty).data
+    local a = rio_pop(ty).data
+    rio_push({ ty="#binary", data=a<=b,
+      eval=function(self) rio_push(self) end })
+  end)
+
+  rio_addcore(namebase .. ">", function(self)
+    local b = rio_pop(ty).data
+    local a = rio_pop(ty).data
+    rio_push({ ty="#binary", data=a>b,
+      eval=function(self) rio_push(self) end })
+  end)
+
+  rio_addcore(namebase .. ">=", function(self)
+    local b = rio_pop(ty).data
+    local a = rio_pop(ty).data
+    rio_push({ ty="#binary", data=a>=b,
+      eval=function(self) rio_push(self) end })
+  end)
+
+  rio_addcore("___block_" .. ty .. "_push", function(self)
+    local elem = rio_pop(ty)
+    listpush(rio_peek("__block").data, elem)
+  end)
 end
 
 rio_addEnumeric("#float8")
-
-rio_addcore("_#float8_#float8_+", function(self)
-  local b = rio_pop("#float8").data
-  local a = rio_pop("#float8").data
-  rio_push({ ty="#float8", data=a+b,
-    eval=function(self) rio_push(self) end })
-end)
-
-rio_addcore("_#float8_#float8_-", function(self)
-  local b = rio_pop("#float8").data
-  local a = rio_pop("#float8").data
-  rio_push({ ty="#float8", data=a-b,
-    eval=function(self) rio_push(self) end })
-end)
-
-rio_addcore("_#float8_#float8_*", function(self)
-  local b = rio_pop("#float8").data
-  local a = rio_pop("#float8").data
-  rio_push({ ty="#float8", data=a*b,
-    eval=function(self) rio_push(self) end })
-end)
-
-rio_addcore("_#float8_#float8_/", function(self)
-  local b = rio_pop("#float8").data
-  local a = rio_pop("#float8").data
-  rio_push({ ty="#float8", data=a/b,
-    eval=function(self) rio_push(self) end })
-end)
-
-rio_addcore("_#float8_#float8_=", function(self)
-  local b = rio_pop("#float8").data
-  local a = rio_pop("#float8").data
-  rio_push({ ty="#binary", data=a==b,
-    eval=function(self) rio_push(self) end })
-end)
-
-rio_addcore("_#float8_#float8_/=", function(self)
-  local b = rio_pop("#float8").data
-  local a = rio_pop("#float8").data
-  rio_push({ ty="#binary", data=a~=b,
-    eval=function(self) rio_push(self) end })
-end)
-
-rio_addcore("_#float8_#float8_<", function(self)
-  local b = rio_pop("#float8").data
-  local a = rio_pop("#float8").data
-  rio_push({ ty="#binary", data=a<b,
-    eval=function(self) rio_push(self) end })
-end)
-
-rio_addcore("_#float8_#float8_<=", function(self)
-  local b = rio_pop("#float8").data
-  local a = rio_pop("#float8").data
-  rio_push({ ty="#binary", data=a<=b,
-    eval=function(self) rio_push(self) end })
-end)
-
-rio_addcore("_#float8_#float8_>", function(self)
-  local b = rio_pop("#float8").data
-  local a = rio_pop("#float8").data
-  rio_push({ ty="#binary", data=a>b,
-    eval=function(self) rio_push(self) end })
-end)
-
-rio_addcore("_#float8_#float8_>=", function(self)
-  local b = rio_pop("#float8").data
-  local a = rio_pop("#float8").data
-  rio_push({ ty="#binary", data=a>=b,
-    eval=function(self) rio_push(self) end })
-end)
-
-rio_addcore("___block_#float8_push", function(self)
-  local elem = rio_pop("#float8")
-  listpush(rio_peek("__block").data, elem)
-end)

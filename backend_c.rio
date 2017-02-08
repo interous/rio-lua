@@ -1,0 +1,99 @@
+'prelude.rio import
+
+"  " set-backend-indent
+
+'check-integral { drop } macro
+
+'make-numeric-type {
+  !backend-type !kind !type
+  type add-type
+  type {}
+    'dup symbol block-push
+    'check- kind ++ symbol block-push
+    'quote-> type ++ symbol block-push
+  macro
+  type '->quote ++ {
+    '__quote unsafe-set-type
+  } macro
+  '_ type '_to-quote ++ ++ {
+    '__quote unsafe-set-type
+  } macro
+  'quote-> type ++ {}
+    type block-push
+    'unsafe-set-type symbol block-push
+  macro
+  
+  '_ type '_ type '_ ++ ++ ++ ++ !preface
+  
+  '_ type '_declare ++ ++ {}
+    backend-type " " ++ block-push
+    'swap symbol block-push
+    ";" block-push
+    '++ symbol block-push
+    '++ symbol block-push
+    'backend-declare symbol block-push
+  macro
+  '_ type '_commit ++ ++ {
+    !val !name
+    name " = " val to-quote ";" ++ ++ ++ backend-code
+  } macro
+  
+  preface '+ ++ {
+    !b !a
+    "(" a to-quote " + " b to-quote ")" ++ ++ ++ ++
+  } 'quote-> type ++ symbol block-push
+  macro
+  
+  preface '= ++ {
+    !b !a
+    "(" a to-quote " == " b to-quote ")" ++ ++ ++ ++
+  } 'quote-> type ++ symbol block-push
+  macro
+  
+  preface '/= ++ {
+    !b !a
+    "(" a to-quote " != " b to-quote ")" ++ ++ ++ ++
+  } 'quote-> type ++ symbol block-push
+  macro
+} macro
+
+'make-decision-type {
+  !type
+  type add-type
+  type ^decision-type
+  type {
+    !val
+    { val '0 /= val '1 /= and }
+    { "Invalid literal to decision constructor; must be 0 or 1" error }
+    if
+    val
+  } 'quote-> type ++ symbol block-push
+  macro
+  type '->quote ++ {
+    '__quote unsafe-set-type
+  } macro
+  '_ type '_to-quote ++ ++ {
+    '__quote unsafe-set-type
+  } macro
+  'quote-> type ++ {}
+    type block-push
+    'unsafe-set-type symbol block-push
+  macro
+} macro
+
+'^int4 'integral 'int make-numeric-type
+'bool make-decision-type
+
+'backend-finalize {
+  !body !decls
+  "int main(int __argv, char** __argc) {\n" decls body "  return 1;\n}\n" ++ ++ ++
+} macro
+
+'backend-if {
+  !false !true !condition
+  "if(" condition to-quote ") {" ++ ++ backend-code
+  true backend-raw-code
+  "} else {" backend-code
+  false backend-raw-code
+  "}" backend-code
+} macro

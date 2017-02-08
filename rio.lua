@@ -4,7 +4,8 @@ require "parse"
 require "error"
 
 backend = "c"
-indent_level = {""}
+indent_level = ""
+indent_step = ""
 
 if not arg[1] then
   print("error: no input file")
@@ -145,7 +146,7 @@ function rio_strtosymbol(s, f, l, c)
   f = f or "core"
   l = l or 0
   c = c or 0
-  return { ty="__symbol", data=s, file=f, line=l, col=c,
+  return { ty="__symbol", data=s, file=f, line=l, col=c, aliases={},
     eval = function(self)
       rio_errorbase = { symbol=self.data, file=self.file, line=self.line, col=self.col }
       rio_getsymbol(self.data):eval()
@@ -153,7 +154,7 @@ function rio_strtosymbol(s, f, l, c)
 end
 
 function rio_strtoquote(s)
-  return { ty="__quote", data=s,
+  return { ty="__quote", data=s, aliases={},
     eval=function(self) rio_push(self) end }
 end
 
@@ -177,17 +178,19 @@ prefixtable["'"] = { eval=function(self) end }
 
 require ("backend_" .. backend)
 
-kinds = {}
-reprs = {}
+types = {}
+decision_types = {}
 
-function rio_addrepr(repr, kind)
-  if kinds[repr] then duplicaterepr(repr) end
-  kinds[repr] = kind
+function rio_addtype(ty)
+  if types[ty] then duplicatetype(ty) end
+  types[ty] = ty
 end
 
-function rio_addtype(ty, repr)
-  if reprs[ty] then duplicatetype(ty) end
-  reprs[ty] = repr
+function rio_makedecisiontype(ty, kind)
+  if not types[ty] then notatype(ty) end
+  if decision_types[ty] then duplicatemakedecision(ty) end
+  if kind ~= "A" and kind ~= "E" then invaliddecisionkind(kind) end
+  decision_types[ty] = kind
 end
 
 function rio_push(val)
@@ -244,8 +247,10 @@ function rio_collapsebindings(old)
   end
 end
 
-function rio_isAtype(t)
-  return reprs[t] and kinds[reprs[t]] and (kinds[reprs[t]] == "^val" or kinds[reprs[t]] == "^ref")
+function rio_commitable(t)
+  return (symboltable["_" .. t .. "_commit"] and
+    symboltable["_" .. t .. "_declare"] and
+    symboltable[t .. "->repr"]) ~= nil
 end
 
 function rio_stackeq(a, b)
@@ -257,43 +262,38 @@ function rio_stackeq(a, b)
 end
 
 function rio_makestackbindings()
-  bindings = newlist()
+  bindings = {}
   mangles = {}
   for i = stack.n, 1, -1 do
-    local mangle = 0
-    local base_name = "__stack_" .. stack[i].ty
-    local name = base_name .. mangle
-    while rio_nameinuse(name) or mangles[name] do
-      mangle = mangle + 1
-      name = base_name .. mangle
+    if rio_commitable(stack[i].ty) then
+      local mangle = 0
+      local base_name = "__stack_" .. rio_sanitize(stack[i].ty)
+      local name = base_name .. mangle
+      while rio_nameinuse(name) or mangles[name] do
+        mangle = mangle + 1
+        name = base_name .. mangle
+      end
+      mangles[name] = true
+      bindings[i] = { name=name, val=stack[i] }
     end
-    mangles[name] = true
-    listpush(bindings, { name=name, val=stack[i] })
   end
   return bindings
 end
 
-function rio_validatestackbindings(bindings)
-  local bindings_stack = newlist()
-  for i = 1, bindings.n do
-    listpush(bindings_stack, bindings[i].val)
-  end
-  if bindings.n ~= stack.n then stackmismatch(bindings_stack, stack) end
+function rio_validatestack(startstack)
+  if startstack.n ~= stack.n then stackmismatch(startstack, stack) end
   for i = 1, stack.n do
-    if stack[i].ty ~= bindings_stack[i].ty then stackmismatch(bindings_stack, stack) end
-    if not rio_isAtype(stack[i].ty) then
-      if stack[i].data ~= bindings_stack[i].data then
-        stackmismatch(bindings_stack, stack)
-      end
+    if stack[i].ty ~= startstack[i].ty or stack[i].data ~= startstack[i].data then
+      stackmismatch(startstack, stack)
     end
   end
 end
 
-function rio_bindstack(bindings)
-  rio_validatestackbindings(bindings)
-  for i = 1, bindings.n do
-    rio_push(rio_strtoquote(bindings[i].name))
-    rio_getsymbol("bind"):eval()
+function rio_bindstack(bindings, startstack)
+  for k,v in pairs(bindings) do
+    if stack[k].ty ~= v.val.ty then stackmismatch(startstack, stack) end
+    rio_commit(v.name, stack[k], true)
+    stack[k] = rio_getsymbol(v.name)
   end
 end
 
@@ -311,7 +311,7 @@ function rio_printstack(s)
     local output = {}
     local i
     for i = 1, s.n do
-      if rio_isAtype(s[i].ty) then
+      if rio_commitable(s[i].ty) then
         table.insert(output, s[i].ty)
       else
         table.insert(output, s[i].ty .. " " .. tostring(s[i].data))
@@ -343,6 +343,33 @@ function rio_addbinding(name, val)
   bindingtable[binding_prefix .. name] = val
 end
 
+function rio_commit(name, val, raw)
+  if rio_commitable(val.ty) then
+    rio_eval(rio_getsymbol(val.ty .. "->repr"))
+    local repr = rio_pop("__quote").data
+    local backend_name
+    if raw then
+      backend_name = binding_prefix .. name .. "__" .. rio_sanitize(repr)
+    else
+      backend_name = binding_prefix .. rio_sanitize(name) .. "__" .. rio_sanitize(repr)
+    end
+    if not declarationtable[name] then
+      rio_push(rio_strtoquote(backend_name))
+      rio_eval(rio_getsymbol("_" .. val.ty .. "_declare"))
+      declarationtable[name] = true
+    end
+    rio_push(rio_strtoquote(backend_name))
+    rio_push(val)
+    rio_eval(rio_getsymbol("_" .. val.ty .. "_commit"))
+    local binding = { ty=val.ty, data=backend_name,
+      aliases={}, eval=function(self) rio_push(self) end }
+    binding.aliases[name] = true
+    rio_addbinding(name, binding)
+  else
+    notcommtiable(val.ty)
+  end
+end
+
 function rio_deletebinding(name)
   if not bindingtable[binding_prefix .. name] then notbound(name) end
   bindingtable[binding_prefix .. name] = nil
@@ -362,18 +389,6 @@ function rio_requiretype(val, ty)
   if val.ty ~= ty then wrongtype(ty, val.ty) end
 end
 
-function rio_requirekind(val, kind)
-  if val ~= kind then wrongkind(kind, val) end
-end
-
-function rio_requiresamerepr(a, b, c)
-  if not reprs[a] then notatype(a) end
-  if not reprs[b] then notatype(b) end
-  if not reprs[c] then notatype(c) end
-  if reprs[a] ~= reprs[b] then kindmismatch(reprs[a], reprs[b]) end
-  if reprs[b] ~= reprs[c] then kindmismatch(reprs[b], reprs[c]) end
-end
-
 binding_prefix = ""
 binding_prefixes = {}
 
@@ -383,7 +398,7 @@ require "core_resource"
 require "core_structure"
 require "core_type"
 require "core_numerics"
-require "core_binary"
+require "core_logic"
 
 function rio_invokewithtrace(block)
   listpush(rio_errorstack, rio_errorbase)

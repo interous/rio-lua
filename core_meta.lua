@@ -1,11 +1,15 @@
 rio_addcore("backend-code", function(self)
   local code = rio_pop("__quote").data
-  table.insert(curbody, indent_level[1] .. code .. "\n")
+  table.insert(curbody, indent_level .. code .. "\n")
+end)
+
+rio_addcore("backend-raw-code", function(self)
+  table.insert(curbody, rio_pop("__quote").data)
 end)
 
 rio_addcore("backend-declare", function(self)
   local decl = rio_pop("__quote").data
-  table.insert(curdecls, indent_level[1] .. decl .. "\n")
+  table.insert(curdecls, indent_level .. decl .. "\n")
 end)
 
 rio_addcore("backend-include", function(self)
@@ -21,17 +25,31 @@ rio_addcore("eval", function(self)
   rio_eval(rio_strtosymbol(quote, rio_errorbase.file, rio_errorbase.line, rio_errorbase.col))
 end)
 
+rio_addcore("error", function(self)
+  usererror(rio_pop("__quote").data)
+end)
+
 rio_addcore("___quote___quote_++", function(self)
-  local b = rio_pop("__quote").data
-  local a = rio_pop("__quote").data
-  rio_push({ ty="__quote", data=a .. b,
-    eval = function(self) rio_push(self) end })
+  local b = rio_pop("__quote")
+  local a = rio_pop("__quote")
+  local r = { ty="__quote", data=a.data .. b.data, aliases={},
+    eval = function(self) rio_push(self) end }
+  for k in pairs(a.aliases) do r.aliases[k] = true end
+  for k in pairs(b.aliases) do r.aliases[k] = true end
+  rio_push(r)
 end)
 
 rio_addcore("___quote___quote_=", function(self)
   local b = rio_pop("__quote").data
   local a = rio_pop("__quote").data
-  rio_push({ ty="#bc", data=a == b,
+  rio_push({ ty="#bc", data=a == b, aliases={},
+    eval = function(self) rio_push(self) end })
+end)
+
+rio_addcore("___quote___quote_/=", function(self)
+  local b = rio_pop("__quote").data
+  local a = rio_pop("__quote").data
+  rio_push({ ty="#bc", data=a ~= b, aliases={},
     eval = function(self) rio_push(self) end })
 end)
 
@@ -41,13 +59,19 @@ rio_addcore("block-push", function(self)
 end)
 
 rio_addcore("quote", function(self)
-  local quote = rio_pop("__quote")
+  local quote = tablecopy(rio_pop("__quote"))
   quote.data = "'" .. quote.data
   rio_push(quote)
 end)
 
 rio_addcore("symbol", function(self)
   rio_push(rio_strtosymbol(rio_pop("__quote").data))
+end)
+
+rio_addcore("defined?", function(self)
+  local name = rio_pop("__quote").data
+  rio_push({ ty="#bc", data=rio_nameinuse(name) ~= nil, aliases={},
+    eval=function(self) rio_push(self) end })
 end)
 
 rio_addcore("lift", function(self)
@@ -66,49 +90,15 @@ rio_addcore("drop", function(self)
   rio_pop()
 end)
 
-rio_addcore("add-repr", function(self)
-  local kind = rio_pop("__quote").data
-  local repr = rio_pop("__quote").data
-  rio_addrepr(repr, kind)
-end)
-
 rio_addcore("add-type", function(self)
-  local repr = rio_pop("__quote").data
-  local ty = rio_pop("__quote").data
-  rio_addtype(ty, repr)
+  rio_addtype(rio_pop("__quote").data)
 end)
 
 rio_addcore("type-at", function(self)
   local idx = rio_pop("#idx").data
   if idx >= stack.n or idx < 0 then outofstackbounds() end
-  rio_push({ ty="__quote", data=stack[stack.n - idx].ty,
+  rio_push({ ty="__quote", data=stack[stack.n - idx].ty, aliases={},
     eval = function(self) rio_push(self) end })
-end)
-
-rio_addcore("repr-at", function(self)
-  local idx = rio_pop("#idx").data
-  if idx >= stack.n or idx < 0 then outofstackbounds() end
-  rio_push({ ty=types["__quote"], data=reprs[stack[stack.n - idx].ty],
-    eval = function(self) rio_push(self) end })
-end)
-
-rio_addcore("kind-at", function(self)
-  local idx = rio_pop("#idx").data
-  if idx >= stack.n or idx < 0 then outofstackbounds() end
-  rio_push({ ty=types["__quote"], data=kinds[reprs[stack[stack.n - idx].ty]],
-    eval = function(self) rio_push(self) end })
-end)
-
-rio_addcore("repr-of", function(self)
-  local ty = rio_pop("__quote").data
-  if not reprs[ty] then notatype(ty) end
-  rio_push(rio_strtoquote(reprs[ty]))
-end)
-
-rio_addcore("kind-of", function(self)
-  local repr = rio_pop("__quote").data
-  if not kinds[repr] then notarepr(repr) end
-  rio_push(rio_strtoquote(kinds[repr]))
 end)
 
 rio_addcore("unsafe-set-type-at", function(self)
@@ -128,9 +118,17 @@ rio_addcore("unsafe-set-type", function(self)
   rio_push(datum)
 end)
 
-rio_addcore("thunk->quote", function(self)
-  local thunk = rio_pop()
-  local kind = kinds[thunk.ty] or kinds[reprs[thunk.ty]]
-  rio_requirekind(kind, "^val")
-  rio_push(rio_strtoquote(tostring(thunk.data)))
+rio_addcore("print-aliases", function(self)
+  local val = rio_pop()
+  local output = {}
+  for k in pairs(val.aliases) do table.insert(output, k) end
+  print(table.concat(output, "; "))
+end)
+
+rio_addcore("print-stack", function(self)
+  rio_printstack()
+end)
+
+rio_addcore("set-backend-indent", function(self)
+  indent_step = rio_pop("__quote").data
 end)

@@ -15,17 +15,37 @@
 
 'unit {
   !repr !type
-  type repr add-type
+  type add-type
   type {}
-  repr symbol block-push
-  type block-push
-  'unsafe-set-type symbol block-push
+    repr symbol block-push
+    type block-push
+    'unsafe-set-type symbol block-push
   macro
+  type '->repr ___quote___quote_++ {}
+    repr block-push
+  macro
+  '_ type '_repr-of ___quote___quote_++ ___quote___quote_++ {}
+    repr block-push
+  macro
+  '_ repr '_commit ___quote___quote_++ ___quote___quote_++ !repr-commit
+  { repr-commit defined? }
+  { '_ type '_commit ___quote___quote_++ ___quote___quote_++ {}
+      repr-commit symbol block-push
+    macro
+    '_ type '_declare ___quote___quote_++ ___quote___quote_++ {}
+      '_ repr '_declare ___quote___quote_++ ___quote___quote_++
+        symbol block-push
+    macro
+    type '->quote ___quote___quote_++ {
+      '__quote unsafe-set-type
+    } macro
+    '_ type '_to-quote ___quote___quote_++ ___quote___quote_++ {
+      '__quote unsafe-set-type
+    } macro
+  } if
 } macro
 
 '#idx '#float8 unit
-
-'#bc '#binary unit
 
 '_#idx_#idx_> {
   '#float8 1 #idx unsafe-set-type-at
@@ -51,17 +71,17 @@
 'poly {
   !i !f
   f { '_ }
-  { i 0 #idx _#idx_#idx_> }
-  { i block-push
-    'type-at symbol block-push
+    { i 0 #idx _#idx_#idx_> }
+    { i block-push
+      'type-at symbol block-push
+      '___quote___quote_++ symbol block-push
+      '_ block-push
+      '___quote___quote_++ symbol block-push
+      i 1 #idx _#idx_#idx_- :i
+    } while
+    f block-push
     '___quote___quote_++ symbol block-push
-    '_ block-push
-    '___quote___quote_++ symbol block-push
-    i 1 #idx _#idx_#idx_- :i
-  } while
-  f block-push
-  '___quote___quote_++ symbol block-push
-  'eval symbol block-push
+    'eval symbol block-push
   macro
 } macro
 
@@ -70,6 +90,7 @@
 '< 2 #idx poly '<= 2 #idx poly '> 2 #idx poly '>= 2 #idx poly
 'and 2 #idx poly 'or 2 #idx poly 'not 1 #idx poly
 '++ 2 #idx poly
+'repr-of 1 #idx poly 'to-quote 1 #idx poly
 
 'derive {
   !f 1 #idx - !i !res
@@ -78,7 +99,7 @@
   { i lift !cur
     name '_ cur ++ ++ :name
     body
-      cur repr-of block-push
+      cur '->repr ++ symbol block-push
       i block-push
       'unsafe-set-type-at symbol block-push
     :body
@@ -112,9 +133,5 @@
 '#idx '#idx '#idx derive* '#idx '#idx '#idx derive/
 '#idx '#idx '#bc derive= '#idx '#idx '#bc derive/=
 '#idx '#idx '#bc derive< '#idx '#idx '#bc derive<=
-
-'#bc '#bc '#bc derive= '#bc '#bc '#bc derive/=
-'#bc '#bc '#bc derive-and '#bc '#bc '#bc derive-or
-'#bc '#bc '#bc derive-not
 
 'swap { 1 #idx lift } macro

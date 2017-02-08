@@ -1,23 +1,4 @@
-'prelude.rio import
-
-'^int4 '^val add-repr
-'^int4 {} macro
-'_^int4_declare {
-  "int " swap ";" ++ ++ backend-declare
-} macro
-'_^int4_commit {
-  !val !name
-  name " = " val thunk->quote ";" ++ ++ ++ backend-code
-} macro
-'_^int4_^int4_+ {
-  thunk->quote !b thunk->quote !a
-  "(" a " + " b ")" ++ ++ ++ ++
-} macro
-
-'backend-finalize {
-  !body !decls
-  "int main(int __argv, char** __argc) {\n" decls body "  return 1;\n}\n" ++ ++ ++
-} macro
+'backend_c.rio import
 
 'console singleton
 
@@ -26,14 +7,24 @@
 
 'A 'A 'A derive+
 'A 'A 'A derive-
+'A 'A 'bool derive=
+'A 'A 'bool derive/=
 'B 'B 'B derive+
 'A 'A 'B derive*
 
 'print 'console {
   @val
   "#include <stdio.h>" backend-include
-  "printf(\"%d\\n\", " val thunk->quote ");" ++ ++ backend-code
+  { val repr-of '^int4 = }
+  { "printf(\"%d\\n\", " val to-quote ");" ++ ++ backend-code }
+  if
 } write
 
-{ 10 A 20 A + 30 A + print
+{ 0 A @a 20 A @b
+  { a 10 A /= }
+  { 30 A 20 A }
+  { 40 A 70 A }
+  if ;b @c
+  a b + c + print
+  a b + c + print-aliases
 } finalize

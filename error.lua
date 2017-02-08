@@ -13,6 +13,12 @@ function stacktrace()
   end
 end
 
+function usererror(message)
+  print(message)
+  stacktrace()
+  os.exit(-1)
+end
+
 function unterminatedblock(file, line, col)
   print("UNTERMINATED_BLOCK beginning at " .. file .. " " .. line .. ":" .. col)
   os.exit(-1)
@@ -35,20 +41,20 @@ function invalidescape(c)
   os.exit(-1)
 end
 
-function reservednoeval(name)
-  print("RESERVED_NO_EVAL " .. name)
-  stacktrace()
-  os.exit(-1)
-end
-
 function duplicatetype(name)
   print("DUPLICATE_TYPE " .. name)
   stacktrace()
   os.exit(-1)
 end
 
-function duplicaterepr(name)
-  print("DUPLICATE_REPRESENTATION " .. name)
+function duplicatemakedecision(name)
+  print("DUPLICATE_MAKE_DECISION_TYPE " .. name)
+  stacktrace()
+  os.exit(-1)
+end
+
+function invaliddecisionkind(kind)
+  print("INVALID_DECISION_KIND " .. kind .. " (must be 'A or 'E)")
   stacktrace()
   os.exit(-1)
 end
@@ -77,52 +83,28 @@ function notbound(name)
   os.exit(-1)
 end
 
+function notcommtiable(name)
+  print("NOT_COMMITABLE " .. name)
+  print("commitable requires _" .. name .. "_declare, _" .. name ..
+    "_commit, and " .. name .. "->repr")
+  stacktrace()
+  os.exit(-1)
+end
+
 function wrongtype(expected, actual)
   print("WRONG_TYPE expected " .. expected .. " got " .. actual)
   stacktrace()
   os.exit(-1)
 end
 
-function wrongrepr(expected, actual)
-  actual = actual or "(unknown)"
-  print("WRONG_REPR expected " .. expected .. " got " .. actual)
-  stacktrace()
-  os.exit(-1)
-end
-
-function wrongkind(expected, actual)
-  actual = actual or "(unknown)"
-  print("WRONG_KIND expected " .. expected .. " got " .. actual)
-  stacktrace()
-  os.exit(-1)
-end
-
-function reprmismatch(a, b)
-  print("REPR_MISMATCH " .. a .. " " .. b)
-  stacktrace()
-  os.exit(-1)
-end
-
-function kindmismatch(a, b)
-  print("KIND_MISMATCH " .. a .. " " .. b)
+function expecteddecision(actual)
+  print("EXPECTED_DECISION_TYPE got " .. actual)
   stacktrace()
   os.exit(-1)
 end
 
 function notatype(name)
   print("NOT_A_TYPE " .. name)
-  stacktrace()
-  os.exit(-1)
-end
-
-function notarepr(name)
-  print("NOT_A_REPR " .. name)
-  stacktrace()
-  os.exit(-1)
-end
-
-function nonnumerickind(name)
-  print("NON_NUMERIC_KIND " .. name)
   stacktrace()
   os.exit(-1)
 end
@@ -158,10 +140,10 @@ end
 
 function bindingmismatch(n, a, b)
   print("BINDING_MISMATCH " .. n)
-  if rio_isAtype(a.ty) then print("  " .. a.ty)
+  if rio_commitable(a.ty) then print("  " .. a.ty)
   else print("  " .. a.ty .. " " .. a.data)
   end
-  if rio_isAtype(b.ty) then print("  " .. b.ty)
+  if rio_commitable(b.ty) then print("  " .. b.ty)
   else print("  " .. b.ty .. " " .. b.data)
   end
   stacktrace()
