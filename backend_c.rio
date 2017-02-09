@@ -44,6 +44,12 @@
   } 'quote-> type ++ symbol block-push
   macro
   
+  preface '< ++ {
+    !b !a
+    "(" a to-quote " < " b to-quote ")" ++ ++ ++ ++
+  } 'quote-> type ++ symbol block-push
+  macro
+  
   preface '= ++ {
     !b !a
     "(" a to-quote " == " b to-quote ")" ++ ++ ++ ++
@@ -95,5 +101,14 @@
   true backend-raw-code
   "} else {" backend-code
   false backend-raw-code
+  "}" backend-code
+} macro
+
+'backend-while {
+  !body !condition !head
+  "while(1) {" backend-code
+  head backend-raw-code
+  "if(!(" condition to-quote ")) break;" ++ ++ backend-code
+  body backend-raw-code
   "}" backend-code
 } macro

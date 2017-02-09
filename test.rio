@@ -7,6 +7,7 @@
 
 'A 'A 'A derive+
 'A 'A 'A derive-
+'A 'A 'bool derive<
 'A 'A 'bool derive=
 'A 'A 'bool derive/=
 'B 'B 'B derive+
@@ -20,11 +21,9 @@
   if
 } write
 
-{ 0 A @a 20 A @b
-  { a 10 A /= }
-  { 30 A 20 A }
-  { 40 A 70 A }
-  if ;b @c
-  a b + c + print
-  a b + c + print-aliases
+{ 0 A @a
+  { a 10 A < }
+  { a print
+    a 1 A + ;a
+  } while
 } finalize

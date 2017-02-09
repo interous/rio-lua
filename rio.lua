@@ -138,7 +138,7 @@ function tablecopy(t)
 end
 
 function rio_listtoblock(l)
-  return { ty="__block", data=l,
+  return { ty="__block", data=l, aliases={},
     eval=function(self) rio_push(rio_listtoblock(listcopy(self.data))) end }
 end
 
@@ -176,7 +176,7 @@ bindingtable = {}
 prefixtable = {}
 prefixtable["'"] = { eval=function(self) end }
 
-require ("backend_" .. backend)
+--require ("backend_" .. backend)
 
 types = {}
 decision_types = {}
@@ -238,7 +238,7 @@ end
 
 function rio_collapsebindings(old)
   for k, v in pairs(bindingtable) do
-    if not old[k] then bindingtable[k] = nil
+    if not old[k] then rio_deletebinding(k, true)
     else
       if old[k].ty ~= v.ty or old[k].data ~= v.data then
         bindingmismatch(k, old[k], v)
@@ -261,13 +261,17 @@ function rio_stackeq(a, b)
   end
 end
 
-function rio_makestackbindings()
+function rio_makestackbindings(startstack)
   bindings = {}
   mangles = {}
   for i = stack.n, 1, -1 do
-    if rio_commitable(stack[i].ty) then
+    if rio_commitable(stack[i].ty) and (not startstack[i] or
+        stack[i].ty ~= startstack[i].ty or
+        stack[i].data ~= startstack[i].data) then
+      rio_eval(rio_getsymbol(stack[i].ty .. "->repr"))
+      local repr = rio_pop("__quote").data
       local mangle = 0
-      local base_name = "__stack_" .. rio_sanitize(stack[i].ty)
+      local base_name = "__stack__" .. rio_sanitize(repr)
       local name = base_name .. mangle
       while rio_nameinuse(name) or mangles[name] do
         mangle = mangle + 1
@@ -289,11 +293,27 @@ function rio_validatestack(startstack)
   end
 end
 
-function rio_bindstack(bindings, startstack)
+function rio_commitstackentry(i, name)
+  if not rio_commitable(stack[i].ty) then notcommtiable(stack[i].ty) end
+  if not name then
+    rio_eval(rio_getsymbol(stack[i].ty .. "->repr"))
+    local repr = rio_pop("__quote").data
+    local mangle = 0
+    local base_name = "__stack__" .. rio_sanitize(repr)
+    name = base_name .. mangle
+    while rio_nameinuse(name) do
+      mangle = mangle + 1
+      name = base_name .. mangle
+    end
+  end
+  rio_commit(name, stack[i], true)
+  stack[i] = rio_getsymbol(name)
+end
+
+function rio_commitstack(bindings, startstack)
   for k,v in pairs(bindings) do
     if stack[k].ty ~= v.val.ty then stackmismatch(startstack, stack) end
-    rio_commit(v.name, stack[k], true)
-    stack[k] = rio_getsymbol(v.name)
+    rio_commitstackentry(k, v.name)
   end
 end
 
@@ -338,20 +358,22 @@ function rio_addprefix(name, val)
   prefixtable[name] = val
 end
 
-function rio_addbinding(name, val)
+function rio_addbinding(name, val, noprefix)
   if rio_nameinuse(name) then alreadybound(name) end
-  bindingtable[binding_prefix .. name] = val
+  if not noprefix then name = binding_prefix .. name end
+  bindingtable[name] = val
 end
 
-function rio_commit(name, val, raw)
+function rio_commit(name, val, raw, noprefix)
   if rio_commitable(val.ty) then
     rio_eval(rio_getsymbol(val.ty .. "->repr"))
     local repr = rio_pop("__quote").data
-    local backend_name
+    local backend_name = ""
+    if not noprefix then backend_name = binding_prefix end
     if raw then
-      backend_name = binding_prefix .. name .. "__" .. rio_sanitize(repr)
+      backend_name = backend_name .. name .. "__" .. rio_sanitize(repr)
     else
-      backend_name = binding_prefix .. rio_sanitize(name) .. "__" .. rio_sanitize(repr)
+      backend_name = backend_name .. rio_sanitize(name) .. "__" .. rio_sanitize(repr)
     end
     if not declarationtable[name] then
       rio_push(rio_strtoquote(backend_name))
@@ -363,16 +385,30 @@ function rio_commit(name, val, raw)
     rio_eval(rio_getsymbol("_" .. val.ty .. "_commit"))
     local binding = { ty=val.ty, data=backend_name,
       aliases={}, eval=function(self) rio_push(self) end }
-    binding.aliases[name] = true
-    rio_addbinding(name, binding)
+    if noprefix then
+      binding.aliases[name] = true
+    else
+      binding.aliases[binding_prefix .. name] = true
+    end
+    rio_addbinding(name, binding, noprefix)
   else
     notcommtiable(val.ty)
   end
 end
 
-function rio_deletebinding(name)
-  if not bindingtable[binding_prefix .. name] then notbound(name) end
-  bindingtable[binding_prefix .. name] = nil
+function rio_deletebinding(name, noprefix)
+  if not noprefix then name = binding_prefix .. name end
+  if not bindingtable[name] then notbound(name) end
+  for i=1,stack.n do
+    if stack[i].aliases[name] then rio_commitstackentry(i) end
+  end
+  for k,v in pairs(bindingtable) do
+    if k ~= name and v.aliases and v.aliases[name] then
+      bindingtable[k] = nil
+      rio_commit(k, v, true, true)
+    end
+  end
+  bindingtable[name] = nil
 end
 
 function rio_addcore(name, f)

@@ -140,12 +140,8 @@ end
 
 function bindingmismatch(n, a, b)
   print("BINDING_MISMATCH " .. n)
-  if rio_commitable(a.ty) then print("  " .. a.ty)
-  else print("  " .. a.ty .. " " .. a.data)
-  end
-  if rio_commitable(b.ty) then print("  " .. b.ty)
-  else print("  " .. b.ty .. " " .. b.data)
-  end
+  print("  " .. a.ty .. " " .. a.data)
+  print("  " .. b.ty .. " " .. b.data)
   stacktrace()
   os.exit(-1)
 end

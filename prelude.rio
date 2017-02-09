@@ -24,7 +24,7 @@
   type '->repr ___quote___quote_++ {}
     repr block-push
   macro
-  '_ type '_repr-of ___quote___quote_++ ___quote___quote_++ {}
+  '_ type '_repr-of ___quote___quote_++ ___quote___quote_++ { drop }
     repr block-push
   macro
   '_ repr '_commit ___quote___quote_++ ___quote___quote_++ !repr-commit

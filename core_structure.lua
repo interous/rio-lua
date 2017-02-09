@@ -38,8 +38,13 @@ rio_addcore("if", function(self)
   end
   if blocks.n < 2 then iftooshort(blocks.n) end
   
-  local startbindings = rio_bindingtablecopy()
+  --[[
+    This may seem a bit obtuse, but the idea is that we should only
+    snapshot the program state at the start of the first A-kind branch.
+  ]]--
+  local startbindings = nil
   local bindings = nil
+  local startstack = nil
   
   Y(function(f) return function(blocks)
     rio_invokewithtrace(listpop(blocks))
@@ -64,13 +69,14 @@ rio_addcore("if", function(self)
       local declbody = {}
       local cur_indent = indent_level
       indent_level = indent_level .. indent_step
-      local startstack = rio_stackcopy()
+      if not startstack then startstack = rio_stackcopy() end
+      if not startbindings then startbindings = rio_bindingtablecopy() end
       rio_collapsebindings(startbindings)
       rio_invokewithtrace(listpop(blocks))
       if not bindings then
-        bindings = rio_makestackbindings()
+        bindings = rio_makestackbindings(startstack)
       end
-      rio_bindstack(bindings, stack)
+      rio_commitstack(bindings, stack)
       local truestack = rio_stackcopy()
       local truebody = table.concat(curbody, "")
       curbody = {}
@@ -78,14 +84,14 @@ rio_addcore("if", function(self)
       rio_collapsebindings(startbindings)
       if blocks.n == 1 then
         rio_invokewithtrace(listpop(blocks))
-        rio_bindstack(bindings, truestack)
+        rio_commitstack(bindings, truestack)
       elseif blocks.n > 1 then
         local bound_elsewhere = f(blocks)
         if not bound_elsewhere then
-          rio_bindstack(bindings, truestack)
+          rio_commitstack(bindings, truestack)
         end
       else
-        rio_bindstack(bindings)
+        rio_commitstack(bindings)
       end
       rio_validatestack(truestack, stack)
       local falsebody = table.concat(curbody, "")
@@ -122,26 +128,27 @@ rio_addcore("while", function(self)
       rio_getsymbol("while"):eval()
     end
   elseif decision_types[condition.ty] == "A" then
-    local bindings = rio_makestackbindings()
+    local bindings = rio_makestackbindings(stack)
     local headcode = table.concat(curbody, "")
-    rio_bindstack(bindings)
+    rio_commitstack(bindings, startstack)
+    rio_validatestack(startstack, stack)
     curbody = {}
     rio_collapsebindings(startbindings)
     stack = rio_stackcopy(startstack)
-    local cur_indent = indent_level[1]
-    indent_level[1] = backend_indent(indent_level[1])
+    local cur_indent = indent_level
+    indent_level = indent_level .. indent_step
     rio_invokewithtrace(body)
-    indent_level[1] = cur_indent
-    rio_bindstack(bindings)
+    indent_level = cur_indent
+    rio_commitstack(bindings, startstack)
+    rio_validatestack(startstack, stack)
     rio_collapsebindings(startbindings)
     local bodycode = table.concat(curbody, "")
     stack = rio_stackcopy(startstack)
     curbody = outerbody
-    for i = 1, bindings.n do
-      decl = backend_declare(binding_prefix, bindings[i].name, bindings[i].val)
-      table.insert(curbody, cur_indent .. decl.code .. "\n")
-    end
-    table.insert(curbody, backend_while(headcode, condition.data, bodycode))
+    rio_push(rio_strtoquote(headcode))
+    rio_push(condition)
+    rio_push(rio_strtoquote(bodycode))
+    rio_eval(rio_getsymbol("backend-while"))
   end
 end)
 
@@ -156,5 +163,4 @@ rio_addcore("finalize", function(self)
   finalize_body = table.concat(curbody, "")
   curdecls = {}
   curbody = {}
-  backend_purgescope()
 end)
