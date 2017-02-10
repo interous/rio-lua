@@ -312,6 +312,7 @@ end
 
 function rio_commitstack(bindings, startstack)
   for k,v in pairs(bindings) do
+    if not stack[k] then stackmismatch(startstack, stack) end
     if stack[k].ty ~= v.val.ty then stackmismatch(startstack, stack) end
     rio_commitstackentry(k, v.name)
   end
@@ -331,11 +332,7 @@ function rio_printstack(s)
     local output = {}
     local i
     for i = 1, s.n do
-      if rio_commitable(s[i].ty) then
-        table.insert(output, s[i].ty)
-      else
-        table.insert(output, s[i].ty .. " " .. tostring(s[i].data))
-      end
+      table.insert(output, s[i].ty .. " " .. tostring(s[i].data))
     end
     print("  " .. table.concat(output, ", "))
   end
@@ -408,6 +405,8 @@ function rio_deletebinding(name, noprefix)
       rio_commit(k, v, true, true)
     end
   end
+  local handler = "_" .. bindingtable[name].ty .. "_delete"
+  if symboltable[handler] then rio_eval(rio_getsymbol(handler)) end
   bindingtable[name] = nil
 end
 

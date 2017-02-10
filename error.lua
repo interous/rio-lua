@@ -140,8 +140,8 @@ end
 
 function bindingmismatch(n, a, b)
   print("BINDING_MISMATCH " .. n)
-  print("  " .. a.ty .. " " .. a.data)
-  print("  " .. b.ty .. " " .. b.data)
+  print("  " .. a.ty .. " " .. tostring(a.data))
+  print("  " .. b.ty .. " " .. tostring(b.data))
   stacktrace()
   os.exit(-1)
 end

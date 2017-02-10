@@ -32,11 +32,8 @@ end)
 rio_addcore("___quote___quote_++", function(self)
   local b = rio_pop("__quote")
   local a = rio_pop("__quote")
-  local r = { ty="__quote", data=a.data .. b.data, aliases={},
-    eval = function(self) rio_push(self) end }
-  for k in pairs(a.aliases) do r.aliases[k] = true end
-  for k in pairs(b.aliases) do r.aliases[k] = true end
-  rio_push(r)
+  rio_push({ ty="__quote", data=a.data .. b.data, aliases={},
+    eval = function(self) rio_push(self) end })
 end)
 
 rio_addcore("___quote___quote_=", function(self)
@@ -131,4 +128,10 @@ end)
 
 rio_addcore("set-backend-indent", function(self)
   indent_step = rio_pop("__quote").data
+end)
+
+rio_addcore("merge-aliases", function(self)
+  local b = rio_pop()
+  local a = rio_peek()
+  for k in pairs(b.aliases) do a.aliases[k] = true end
 end)

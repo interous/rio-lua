@@ -41,24 +41,28 @@
   preface '+ ++ {
     !b !a
     "(" a to-quote " + " b to-quote ")" ++ ++ ++ ++
+    b merge-aliases a merge-aliases
   } 'quote-> type ++ symbol block-push
   macro
   
   preface '< ++ {
     !b !a
     "(" a to-quote " < " b to-quote ")" ++ ++ ++ ++
+    b merge-aliases a merge-aliases
   } 'quote-> type ++ symbol block-push
   macro
   
   preface '= ++ {
     !b !a
     "(" a to-quote " == " b to-quote ")" ++ ++ ++ ++
+    b merge-aliases a merge-aliases
   } 'quote-> type ++ symbol block-push
   macro
   
   preface '/= ++ {
     !b !a
     "(" a to-quote " != " b to-quote ")" ++ ++ ++ ++
+    b merge-aliases a merge-aliases
   } 'quote-> type ++ symbol block-push
   macro
 } macro

@@ -77,11 +77,11 @@ rio_addcore("if", function(self)
         bindings = rio_makestackbindings(startstack)
       end
       rio_commitstack(bindings, stack)
+      rio_collapsebindings(startbindings)
+      stack = tablecopy(startstack)
       local truestack = rio_stackcopy()
       local truebody = table.concat(curbody, "")
       curbody = {}
-      stack = tablecopy(startstack)
-      rio_collapsebindings(startbindings)
       if blocks.n == 1 then
         rio_invokewithtrace(listpop(blocks))
         rio_commitstack(bindings, truestack)
@@ -91,7 +91,7 @@ rio_addcore("if", function(self)
           rio_commitstack(bindings, truestack)
         end
       else
-        rio_commitstack(bindings)
+        rio_commitstack(bindings, truestack)
       end
       rio_validatestack(truestack, stack)
       local falsebody = table.concat(curbody, "")

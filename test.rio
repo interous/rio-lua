@@ -13,17 +13,20 @@
 'B 'B 'B derive+
 'A 'A 'B derive*
 
+'_A_delete { "deleting an A" print } macro
+
 'print 'console {
-  @val
+  !val
   "#include <stdio.h>" backend-include
+  { val type-of '__quote = }
+  { "printf(\"" val "\\n\");" ++ ++ backend-code }
   { val repr-of '^int4 = }
   { "printf(\"%d\\n\", " val to-quote ");" ++ ++ backend-code }
   if
 } write
 
-{ 0 A @a
-  { a 10 A < }
-  { a print
-    a 1 A + ;a
-  } while
+{ { 1 bool }
+  { 1 A @b }
+  if
+  2 A print
 } finalize

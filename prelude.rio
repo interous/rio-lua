@@ -135,3 +135,4 @@
 '#idx '#idx '#bc derive< '#idx '#idx '#bc derive<=
 
 'swap { 1 #idx lift } macro
+'type-of { 0 #idx type-at swap drop } macro
