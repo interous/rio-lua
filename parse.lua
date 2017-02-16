@@ -29,21 +29,23 @@ function nextatom()
       return nextatom()
     end
   end
-  
+
   local startfile = f.name
   local startline = f.line
   local startcol = f.col
-  
+
   if c == "{" then
     local block = { n=0 }
-    nextchar()
+    c = nextchar()
+    while c == " " or c == "\n" or c == "\t" do c = nextchar() end
     while curchar() ~= "}" do
-      block.n = block.n + 1
-      block[block.n] = nextatom()
-      c = curchar()
-      while c == " " or c == "\n" or c == "\t" do
-        c = nextchar()
+      local atom = nextatom()
+      if atom then
+        block.n = block.n + 1
+        block[block.n] = atom
       end
+      c = curchar()
+      while c == " " or c == "\n" or c == "\t" do c = nextchar() end
       if c == "" then
         unterminatedblock(startfile, startline, startcol)
       end
@@ -52,6 +54,22 @@ function nextatom()
     return rio_listtoblock(block)
   elseif c == "}" then
     orphanbrace()
+  elseif c == "[" then
+    local level = 1
+    while level > 0 do
+      c = nextchar()
+      if c == "[" then
+        level = level + 1
+      elseif c == "]" then
+        level = level - 1
+      elseif not c then
+        break
+      end
+    end
+    nextchar()
+    return nil
+  elseif c == "]" then
+    orphanbracket()
   elseif c == "'" or c == "." or c == "-" or tonumber(c) then
     local quote = ""
     local isquote = tonumber(c)

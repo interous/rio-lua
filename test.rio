@@ -13,7 +13,7 @@
 'B 'B 'B derive+
 'A 'A 'B derive*
 
-'_A_delete { "deleting an A" print } macro
+'_A_delete { !data !name "deleting " name " which is bound to " data ++ ++ ++ print } macro
 
 'print 'console {
   !val

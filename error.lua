@@ -35,6 +35,12 @@ function orphanbrace()
   os.exit(-1)
 end
 
+function orphanbracket()
+  local f = filestack[filestack.n]
+  print("ORPHAN_CLOSE_COMMENT at " .. f.name .. " " .. f.line .. ":" .. f.col)
+  os.exit(-1)
+end
+
 function invalidescape(c)
   local f = filestack[filestack.n]
   print("INVALID_ESCAPE " .. c .. " at " .. f.name .. " " .. f.line .. ":" .. f.col)

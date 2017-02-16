@@ -14,17 +14,17 @@ end
 
 --[[
   The legendary Y-combinator, which does anonymous recursion.
-  
+
   The argument to Y is a unary function f, which should return a nullary
   or unary function. The inner function then does the work, and f is an
   anonymous function that allows recursive calls on the inner function.
-  
+
   For example, you could do something like,
   factorial = Y(function(f) return function(n)
     if n == 0 then return 1 else return n * f(n - 1) end
   end end)
   factorial(5) -- returns 120
-  
+
   You can handle functions of higher arity by embedding more and more
   anonymous functions. For example,
   print_nums = Y(function(f) return function(a) return function(b)
@@ -32,7 +32,7 @@ end
     if a > 0 then f(a-1)(b-1) end
   end end end)
   print_nums(3)(6) -- prints 3 6; 2 5; 1 4; 0 3
-  
+
   You can also do higher arity by having a single unary inner function
   that takes a table argument:
   print_nums = Y(function(f) return function(args)
@@ -40,7 +40,7 @@ end
     if args[1] > 0 then f{args[1]-1, args[2]-1} end
   end end)
   print_nums{3, 6} -- prints 3 6; 2 5; 1 4; 0 3
-  
+
   Finally, embedding multiple anonymous functions can be used for
   argument closures:
   divmod = Y(function(f)
@@ -232,7 +232,7 @@ end
 
 function rio_deletenewbindings(old)
   for k,v in pairs(bindingtable) do
-    if not old[k] then bindingtable[k] = nil end
+    if not old[k] then rio_deletebinding(k, true) end
   end
 end
 
@@ -406,7 +406,11 @@ function rio_deletebinding(name, noprefix)
     end
   end
   local handler = "_" .. bindingtable[name].ty .. "_delete"
-  if symboltable[handler] then rio_eval(rio_getsymbol(handler)) end
+  if symboltable[handler] then
+    rio_push(rio_strtoquote(name))
+    rio_push(rio_strtoquote(bindingtable[name].data))
+    rio_eval(rio_getsymbol(handler))
+  end
   bindingtable[name] = nil
 end
 
@@ -454,11 +458,7 @@ function rio_invokeasmacro(name, body)
   binding_prefix = "__" .. sanitized .. binding_prefix
   local old_bindingtable = rio_bindingtablecopy()
   rio_invokewithtrace(body)
-  local merged_bindingtable = {}
-  for k, v in pairs(old_bindingtable) do
-    if bindingtable[k] then merged_bindingtable[k] = bindingtable[k] end
-  end
-  bindingtable = merged_bindingtable
+  rio_collapsebindings(old_bindingtable)
   binding_prefixes[sanitized] = nil
   binding_prefix = old_prefix
 end
