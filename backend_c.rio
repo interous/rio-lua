@@ -2,7 +2,37 @@
 
 "  " set-backend-indent
 
-'check-integral { drop } macro
+'check-rational {
+  !lit 0 #idx !i
+  #f !found-dot
+  { lit i at '- quote->char = } { i inc :i } if
+
+  { } { i lit len < } { i inc :i }
+  { lit i at !cur
+    { cur '. quote->char = found-dot and }
+    { "Failed to parse " lit " as rational (found two dots)" ++ ++
+      compile-error
+    }
+    { cur '. quote->char = } { #t :found-dot }
+    { cur '0 quote->char < cur '9 quote->char > or }
+    { "Failed to parse " lit " as rational: " cur char->quote " not a digit"
+      ++ ++ ++ ++ compile-error
+    } if
+  } for
+} macro
+
+'check-integral {
+  !lit 0 #idx !i
+  { lit i at '- quote->char = } { i inc :i } if
+
+  { } { i lit len < } { i inc :i }
+  { lit i at !cur
+    { cur '0 quote->char < cur '9 quote->char > or }
+    { "Failed to parse " lit " as integral: " cur char->quote " not a digit"
+      ++ ++ ++ ++ compile-error
+    } if
+  } for
+} macro
 
 'make-numeric-type {
   !backend-type !kind !type
@@ -22,9 +52,9 @@
     type block-push
     'unsafe-set-type symbol block-push
   macro
-  
+
   '_ type '_ type '_ ++ ++ ++ ++ !preface
-  
+
   '_ type '_declare ++ ++ {}
     backend-type " " ++ block-push
     'swap symbol block-push
@@ -37,28 +67,28 @@
     !val !name
     name " = " val to-quote ";" ++ ++ ++ backend-code
   } macro
-  
+
   preface '+ ++ {
     !b !a
     "(" a to-quote " + " b to-quote ")" ++ ++ ++ ++
     b merge-aliases a merge-aliases
   } 'quote-> type ++ symbol block-push
   macro
-  
+
   preface '< ++ {
     !b !a
     "(" a to-quote " < " b to-quote ")" ++ ++ ++ ++
     b merge-aliases a merge-aliases
   } 'quote-> type ++ symbol block-push
   macro
-  
+
   preface '= ++ {
     !b !a
     "(" a to-quote " == " b to-quote ")" ++ ++ ++ ++
     b merge-aliases a merge-aliases
   } 'quote-> type ++ symbol block-push
   macro
-  
+
   preface '/= ++ {
     !b !a
     "(" a to-quote " != " b to-quote ")" ++ ++ ++ ++
@@ -74,7 +104,7 @@
   type {
     !val
     { val '0 /= val '1 /= and }
-    { "Invalid literal to decision constructor; must be 0 or 1" error }
+    { "Invalid literal to decision constructor; must be 0 or 1" compile-error }
     if
     val
   } 'quote-> type ++ symbol block-push

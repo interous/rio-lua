@@ -45,7 +45,7 @@
   } if
 } macro
 
-'#idx '#float8 unit
+'#idx '#float8 unit '#latin1-char '#float8 unit
 
 '_#idx_#idx_> {
   '#float8 1 #idx unsafe-set-type-at
@@ -91,6 +91,7 @@
 'and 2 #idx poly 'or 2 #idx poly 'not 1 #idx poly
 '++ 2 #idx poly
 'repr-of 1 #idx poly 'to-quote 1 #idx poly
+'at 2 #idx poly 'len 1 #idx poly
 
 'derive {
   !f 1 #idx - !i !res
@@ -129,10 +130,42 @@
 'derive-not { 1 #idx 'not derive } macro
 'derive++ { 2 #idx '++ derive } macro
 
+[ A simply-numeric type is one that has identity multiplication and division.
+  This could also be thought of as "algebraic" numeric types: it's for the case
+  that traversing an array 10 times with a stride of 10 puts you at element 100.
+]
+'derive-simply-numeric {
+  !bc !ty
+  ty ty ty derive+ ty ty ty derive-
+  ty ty ty derive* ty ty ty derive/
+  ty ty bc derive= ty ty bc derive/=
+  ty ty bc derive< ty ty bc derive<=
+  ty ty bc derive> ty ty bc derive>=
+} macro
+
+[ Note, we have to derive #idx specially because it has custom-written
+  derivations, which were necessary to support writing the derive macro itself.
+]
 '#idx '#idx '#idx derive+
 '#idx '#idx '#idx derive* '#idx '#idx '#idx derive/
 '#idx '#idx '#bc derive= '#idx '#idx '#bc derive/=
 '#idx '#idx '#bc derive< '#idx '#idx '#bc derive<=
 
+'#latin1-char '#bc derive-simply-numeric
+
 'swap { 1 #idx lift } macro
 'type-of { 0 #idx type-at swap drop } macro
+
+'inc { !val val 1 val type-of eval + } macro
+'dec { !val val 1 val type-of eval - } macro
+
+'for {
+  !body !change !check !preamble
+  preamble flatten
+  check
+  body change ++
+  while
+} inline
+
+'#t { 1 #bc } macro
+'#f { 0 #bc } macro

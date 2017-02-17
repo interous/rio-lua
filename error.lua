@@ -151,3 +151,21 @@ function bindingmismatch(n, a, b)
   stacktrace()
   os.exit(-1)
 end
+
+function outofquotebounds(n, i)
+  print("OUT_OF_QUOTE_BOUNDS " .. n .. " " .. tostring(i))
+  stacktrace()
+  os.exit(-1)
+end
+
+function quotewronglength(q)
+  print("QUOTE_WRONG_LENGTH " .. q .. " (must be exactly one character)")
+  stacktrace()
+  os.exit(-1)
+end
+
+function charoutofbounds(c)
+  print("CHAR_OUT_OF_BOUNDS " .. tostring(c) .. " (must be between 0 and 255)")
+  stacktrace()
+  os.exit(-1)
+end

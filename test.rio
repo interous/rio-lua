@@ -5,13 +5,8 @@
 'A '^int4 unit
 'B '^int4 unit
 
-'A 'A 'A derive+
-'A 'A 'A derive-
-'A 'A 'bool derive<
-'A 'A 'bool derive=
-'A 'A 'bool derive/=
-'B 'B 'B derive+
-'A 'A 'B derive*
+'A 'bool derive-simply-numeric
+'B 'bool derive-simply-numeric
 
 '_A_delete { !data !name "deleting " name " which is bound to " data ++ ++ ++ print } macro
 
@@ -25,8 +20,7 @@
   if
 } write
 
-{ { 1 bool }
-  { 1 A @b }
-  if
-  2 A print
+{ { 0 #idx !i } { i 10 #idx < } { i inc :i }
+  { "hello world" print }
+  for
 } finalize

@@ -39,11 +39,8 @@ function nextatom()
     c = nextchar()
     while c == " " or c == "\n" or c == "\t" do c = nextchar() end
     while curchar() ~= "}" do
-      local atom = nextatom()
-      if atom then
-        block.n = block.n + 1
-        block[block.n] = atom
-      end
+      block.n = block.n + 1
+      block[block.n] = nextatom()
       c = curchar()
       while c == " " or c == "\n" or c == "\t" do c = nextchar() end
       if c == "" then
@@ -67,7 +64,7 @@ function nextatom()
       end
     end
     nextchar()
-    return nil
+    return nextatom()
   elseif c == "]" then
     orphanbracket()
   elseif c == "'" or c == "." or c == "-" or tonumber(c) then

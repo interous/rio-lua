@@ -25,7 +25,11 @@ rio_addcore("eval", function(self)
   rio_eval(rio_strtosymbol(quote, rio_errorbase.file, rio_errorbase.line, rio_errorbase.col))
 end)
 
-rio_addcore("error", function(self)
+rio_addcore("flatten", function(self)
+  rio_invokewithtrace(rio_pop("__block").data)
+end)
+
+rio_addcore("compile-error", function(self)
   usererror(rio_pop("__quote").data)
 end)
 
@@ -53,9 +57,42 @@ rio_addcore("___quote___quote_/=", function(self)
     eval = function(self) rio_push(self) end })
 end)
 
+rio_addcore("___quote_#idx_at", function(self)
+  local idx = rio_pop("#idx").data + 1
+  local quote = rio_pop("__quote").data
+  if idx < 0 or idx > quote:len() then outofquotebounds(quote, idx) end
+  rio_push({ ty="#latin1-char", data=quote:byte(idx),
+    eval = function(self) rio_push(self) end })
+end)
+
+rio_addcore("quote->char", function(self)
+  local quote = rio_pop("__quote").data
+  if quote:len() ~= 1 then quotewronglength(quote) end
+  rio_push({ ty="#latin1-char", data=quote:byte(1),
+    eval = function(self) rio_push(self) end })
+end)
+
+rio_addcore("char->quote", function(self)
+  local char = rio_pop("#latin1-char").data
+  if char < 0 or char > 255 then charoutofbounds(char) end
+  rio_push(rio_strtoquote(string.char(char)))
+end)
+
+rio_addcore("___quote_len", function(self)
+  local quote = rio_pop("__quote").data
+  rio_push({ ty="#idx", data=quote:len(),
+    eval=function(self) rio_push(self) end })
+end)
+
 rio_addcore("block-push", function(self)
   local elem = rio_pop()
   listpush(rio_peek("__block").data, elem)
+end)
+
+rio_addcore("___block___block_++", function(self)
+  local b = rio_pop("__block").data
+  local a = rio_pop("__block").data
+  rio_push(rio_listtoblock(tableconcat(a, b)))
 end)
 
 rio_addcore("quote", function(self)
@@ -127,6 +164,10 @@ end)
 
 rio_addcore("print-stack", function(self)
   rio_printstack()
+end)
+
+rio_addcore("print-immediate", function(self)
+  print(rio_pop("__quote").data)
 end)
 
 rio_addcore("set-backend-indent", function(self)

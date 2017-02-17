@@ -137,6 +137,17 @@ function tablecopy(t)
   return c
 end
 
+function tableconcat(a, b)
+  local c = { n=a.n + b.n }
+  for k,v in pairs(a) do
+    if k ~= "n" then table.insert(c, v) end
+  end
+  for k,v in pairs(b) do
+    if k ~= "n" then table.insert(c, v) end
+  end
+  return c
+end
+
 function rio_listtoblock(l)
   return { ty="__block", data=l, aliases={},
     eval=function(self) rio_push(rio_listtoblock(listcopy(self.data))) end }
