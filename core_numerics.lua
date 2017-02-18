@@ -4,79 +4,79 @@ function rio_addEnumeric(ty)
     local s = rio_pop("__quote").data
     local parsed = tonumber(s)
     if not parsed then badliteral(s, ty) end
-    rio_push({ ty=ty, data=parsed, aliases={},
+    rio_push({ ty=ty, data=parsed, aliases={}, mut=true,
       eval=function(self) rio_push(self) end })
   end)
-  
+
   local namebase = "_" .. ty .. "_" .. ty .. "_"
-  
+
   rio_addcore(namebase .. "+", function(self)
     local b = rio_pop(ty).data
     local a = rio_pop(ty).data
-    rio_push({ ty=ty, data=a+b, aliases={},
+    rio_push({ ty=ty, data=a+b, aliases={}, mut=true,
       eval=function(self) rio_push(self) end })
   end)
 
   rio_addcore(namebase .. "-", function(self)
     local b = rio_pop(ty).data
     local a = rio_pop(ty).data
-    rio_push({ ty=ty, data=a-b, aliases={},
+    rio_push({ ty=ty, data=a-b, aliases={}, mut=true,
       eval=function(self) rio_push(self) end })
   end)
 
   rio_addcore(namebase .. "*", function(self)
     local b = rio_pop(ty).data
     local a = rio_pop(ty).data
-    rio_push({ ty=ty, data=a*b, aliases={},
+    rio_push({ ty=ty, data=a*b, aliases={}, mut=true,
       eval=function(self) rio_push(self) end })
   end)
 
   rio_addcore(namebase .. "/", function(self)
     local b = rio_pop(ty).data
     local a = rio_pop(ty).data
-    rio_push({ ty=ty, data=a/b, aliases={},
+    rio_push({ ty=ty, data=a/b, aliases={}, mut=true,
       eval=function(self) rio_push(self) end })
   end)
 
   rio_addcore(namebase .. "=", function(self)
     local b = rio_pop(ty).data
     local a = rio_pop(ty).data
-    rio_push({ ty="#binary", data=a==b, aliases={},
+    rio_push({ ty="#binary", data=a==b, aliases={}, mut=true,
       eval=function(self) rio_push(self) end })
   end)
 
   rio_addcore(namebase .. "/=", function(self)
     local b = rio_pop(ty).data
     local a = rio_pop(ty).data
-    rio_push({ ty="#binary", data=a~=b, aliases={},
+    rio_push({ ty="#binary", data=a~=b, aliases={}, mut=true,
       eval=function(self) rio_push(self) end })
   end)
 
   rio_addcore(namebase .. "<", function(self)
     local b = rio_pop(ty).data
     local a = rio_pop(ty).data
-    rio_push({ ty="#binary", data=a<b, aliases={},
+    rio_push({ ty="#binary", data=a<b, aliases={}, mut=true,
       eval=function(self) rio_push(self) end })
   end)
 
   rio_addcore(namebase .. "<=", function(self)
     local b = rio_pop(ty).data
     local a = rio_pop(ty).data
-    rio_push({ ty="#binary", data=a<=b, aliases={},
+    rio_push({ ty="#binary", data=a<=b, aliases={}, mut=true,
       eval=function(self) rio_push(self) end })
   end)
 
   rio_addcore(namebase .. ">", function(self)
     local b = rio_pop(ty).data
     local a = rio_pop(ty).data
-    rio_push({ ty="#binary", data=a>b, aliases={},
+    rio_push({ ty="#binary", data=a>b, aliases={}, mut=true,
       eval=function(self) rio_push(self) end })
   end)
 
   rio_addcore(namebase .. ">=", function(self)
     local b = rio_pop(ty).data
     local a = rio_pop(ty).data
-    rio_push({ ty="#binary", data=a>=b, aliases={},
+    rio_push({ ty="#binary", data=a>=b, aliases={}, mut=true,
       eval=function(self) rio_push(self) end })
   end)
 

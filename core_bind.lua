@@ -13,3 +13,7 @@ end)
 rio_addcore("delete", function(self)
   rio_deletebinding(rio_pop("__quote").data)
 end)
+
+rio_addcore("raw-delete", function(self)
+  rio_deletebinding(rio_pop("__quote").data, false, true)
+end)

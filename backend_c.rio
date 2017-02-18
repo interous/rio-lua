@@ -4,7 +4,7 @@
 
 'check-rational {
   !lit 0 #idx !i
-  #f !found-dot
+  #false !found-dot
   { lit i at '- quote->char = } { i inc :i } if
 
   { } { i lit len < } { i inc :i }
@@ -13,7 +13,7 @@
     { "Failed to parse " lit " as rational (found two dots)" ++ ++
       compile-error
     }
-    { cur '. quote->char = } { #t :found-dot }
+    { cur '. quote->char = } { #true :found-dot }
     { cur '0 quote->char < cur '9 quote->char > or }
     { "Failed to parse " lit " as rational: " cur char->quote " not a digit"
       ++ ++ ++ ++ compile-error
@@ -35,7 +35,7 @@
 } macro
 
 'make-numeric-type {
-  !backend-type !kind !type
+  !repr '#B require-type !size !kind !type
   type add-type
   type {}
     'dup symbol block-push
@@ -52,11 +52,23 @@
     type block-push
     'unsafe-set-type symbol block-push
   macro
+  type '->repr ___quote___quote_++ {}
+    repr block-push
+  macro
+  '_ type '_repr-of ___quote___quote_++ ___quote___quote_++ { drop }
+    repr block-push
+  macro
+  type '->size ++ {}
+    size block-push
+  macro
+  '_ type '_size-of ++ ++ { drop }
+    size block-push
+  macro
 
   '_ type '_ type '_ ++ ++ ++ ++ !preface
 
   '_ type '_declare ++ ++ {}
-    backend-type " " ++ block-push
+    repr " " ++ block-push
     'swap symbol block-push
     ";" block-push
     '++ symbol block-push
@@ -65,33 +77,33 @@
   macro
   '_ type '_commit ++ ++ {
     !val !name
-    name " = " val to-quote ";" ++ ++ ++ backend-code
+    name " = " val to-quote '; ++ ++ ++ backend-code
   } macro
 
   preface '+ ++ {
     !b !a
-    "(" a to-quote " + " b to-quote ")" ++ ++ ++ ++
+    '( a to-quote " + " b to-quote ') ++ ++ ++ ++
     b merge-aliases a merge-aliases
   } 'quote-> type ++ symbol block-push
   macro
 
   preface '< ++ {
     !b !a
-    "(" a to-quote " < " b to-quote ")" ++ ++ ++ ++
+    '( a to-quote " < " b to-quote ') ++ ++ ++ ++
     b merge-aliases a merge-aliases
   } 'quote-> type ++ symbol block-push
   macro
 
   preface '= ++ {
     !b !a
-    "(" a to-quote " == " b to-quote ")" ++ ++ ++ ++
+    '( a to-quote " == " b to-quote ') ++ ++ ++ ++
     b merge-aliases a merge-aliases
   } 'quote-> type ++ symbol block-push
   macro
 
   preface '/= ++ {
     !b !a
-    "(" a to-quote " != " b to-quote ")" ++ ++ ++ ++
+    '( a to-quote " != " b to-quote ') ++ ++ ++ ++
     b merge-aliases a merge-aliases
   } 'quote-> type ++ symbol block-push
   macro
@@ -119,10 +131,81 @@
     type block-push
     'unsafe-set-type symbol block-push
   macro
+
+  [ Assume we're using int as the underlying decision type ]
+  type '->size ++ { 4 #B } macro
+  '_ type '_size-of ++ ++ { drop 4 #B } macro
+
+  '_ type '_ type '_ ++ ++ ++ ++ !preface
+
+  '_ type '_declare ++ ++ {
+    "int " swap '; ++ ++ backend-declare
+  } macro
+  '_ type '_commit ++ ++ {
+    !val !name
+    name " = " val to-quote '; ++ ++ ++ backend-code
+  } macro
+
+  preface 'and ++ {
+    !b !a
+    '( a to-quote " && " b to-quote ') ++ ++ ++ ++
+    b merge-aliases a merge-aliases
+  } 'quote-> type ++ symbol block-push
+  macro
+
+  preface 'or ++ {
+    !b !a
+    '( a to-quote " || " b to-quote ') ++ ++ ++ ++
+    b merge-aliases a merge-aliases
+  } 'quote-> type ++ symbol block-push
+  macro
+
+  preface 'not ++ {
+    '!( swap to-quote ') ++ ++
+  } 'quote-> type ++ symbol block-push
+  macro
+
+  preface '= ++ {
+    !b !a
+    '( a to-quote " == " b to-quote ') ++ ++ ++ ++
+    b merge-aliases a merge-aliases
+  } 'quote-> type ++ symbol block-push
+  macro
+
+  preface '/= ++ {
+    !b !a
+    '( a to-quote " != " b to-quote ') ++ ++ ++ ++
+    b merge-aliases a merge-aliases
+  } 'quote-> type ++ symbol block-push
+  macro
 } macro
 
-'^int4 'integral 'int make-numeric-type
+'int4 'integral 4 #B 'int make-numeric-type
+'ratio4 'rational 4 #B 'float make-numeric-type
 'bool make-decision-type
+
+'list-type {
+  !inner !outer
+  outer add-type
+  inner '->repr ++ eval !inner-repr
+  inner '->size ++ eval !inner-size
+
+  2 pointer-size * inner-size / !header-size
+
+  outer {}
+    outer block-push
+  { mangle-name !name }
+    inner-repr block-push
+  { "* " name '; ++ ++ ++ backend-declare
+  } ++ ++ inline
+  [ Need to finish this up, but............. named arguments? ]
+
+  outer '->repr ++ {}
+    inner-repr block-push
+    '* block-push
+    '++ symbol block-push
+  macro
+} macro
 
 'backend-finalize {
   !body !decls

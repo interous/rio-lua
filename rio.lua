@@ -149,7 +149,7 @@ function tableconcat(a, b)
 end
 
 function rio_listtoblock(l)
-  return { ty="__block", data=l, aliases={},
+  return { ty="__block", data=l, aliases={}, mut=true,
     eval=function(self) rio_push(rio_listtoblock(listcopy(self.data))) end }
 end
 
@@ -157,7 +157,7 @@ function rio_strtosymbol(s, f, l, c)
   f = f or "core"
   l = l or 0
   c = c or 0
-  return { ty="__symbol", data=s, file=f, line=l, col=c, aliases={},
+  return { ty="__symbol", data=s, file=f, line=l, col=c, aliases={}, mut=true,
     eval = function(self)
       rio_errorbase = { symbol=self.data, file=self.file, line=self.line, col=self.col }
       rio_getsymbol(self.data):eval()
@@ -165,7 +165,7 @@ function rio_strtosymbol(s, f, l, c)
 end
 
 function rio_strtoquote(s)
-  return { ty="__quote", data=s, aliases={},
+  return { ty="__quote", data=s, aliases={}, mut=true,
     eval=function(self) rio_push(self) end }
 end
 
@@ -391,7 +391,7 @@ function rio_commit(name, val, raw, noprefix)
     rio_push(rio_strtoquote(backend_name))
     rio_push(val)
     rio_eval(rio_getsymbol("_" .. val.ty .. "_commit"))
-    local binding = { ty=val.ty, data=backend_name,
+    local binding = { ty=val.ty, data=backend_name, mut=val.mut,
       aliases={}, eval=function(self) rio_push(self) end }
     if noprefix then
       binding.aliases[name] = true
@@ -404,7 +404,7 @@ function rio_commit(name, val, raw, noprefix)
   end
 end
 
-function rio_deletebinding(name, noprefix)
+function rio_deletebinding(name, noprefix, nodestruct)
   if not noprefix then name = binding_prefix .. name end
   if not bindingtable[name] then notbound(name) end
   for i=1,stack.n do
@@ -416,11 +416,13 @@ function rio_deletebinding(name, noprefix)
       rio_commit(k, v, true, true)
     end
   end
-  local handler = "_" .. bindingtable[name].ty .. "_delete"
-  if symboltable[handler] then
-    rio_push(rio_strtoquote(name))
-    rio_push(rio_strtoquote(bindingtable[name].data))
-    rio_eval(rio_getsymbol(handler))
+  if not nodestruct then
+    local handler = "_" .. bindingtable[name].ty .. "_delete"
+    if symboltable[handler] then
+      rio_push(rio_strtoquote(name))
+      rio_push(bindingtable[name])
+      rio_eval(rio_getsymbol(handler))
+    end
   end
   bindingtable[name] = nil
 end

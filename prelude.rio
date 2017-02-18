@@ -13,27 +13,43 @@
 ': { rebind } prefix
 '; { recommit } prefix
 
+'dup { !x x x } macro
+'drop { !x } macro
+'raw-drop { !x 'x raw-delete } macro
+
 'unit {
-  !repr !type
+  !base !type
   type add-type
   type {}
-    repr symbol block-push
+    base symbol block-push
     type block-push
     'unsafe-set-type symbol block-push
   macro
-  type '->repr ___quote___quote_++ {}
-    repr block-push
+  type '->base-type ___quote___quote_++ {}
+    base block-push
   macro
-  '_ type '_repr-of ___quote___quote_++ ___quote___quote_++ { drop }
-    repr block-push
+  '_ type '_base-type-of ___quote___quote_++ ___quote___quote_++ { drop }
+    base block-push
   macro
-  '_ repr '_commit ___quote___quote_++ ___quote___quote_++ !repr-commit
-  { repr-commit defined? }
-  { '_ type '_commit ___quote___quote_++ ___quote___quote_++ {}
-      repr-commit symbol block-push
+  '_ base '_commit ___quote___quote_++ ___quote___quote_++ !base-commit
+  { base-commit defined? }
+  { type '->repr ___quote___quote_++ {}
+      base '->repr ++ eval block-push
+    macro
+    '_ type '_repr-of ___quote___quote_++ ___quote___quote_++ { drop }
+      base '->repr ++ eval block-push
+    macro
+    type '->size ++ {}
+      base '->size ++ eval block-push
+    macro
+    '_ type '_size-of ++ ++ { drop }
+      base '->size ++ eval block-push
+    macro
+    '_ type '_commit ___quote___quote_++ ___quote___quote_++ {}
+      base-commit symbol block-push
     macro
     '_ type '_declare ___quote___quote_++ ___quote___quote_++ {}
-      '_ repr '_declare ___quote___quote_++ ___quote___quote_++
+      '_ base '_declare ___quote___quote_++ ___quote___quote_++
         symbol block-push
     macro
     type '->quote ___quote___quote_++ {
@@ -45,7 +61,11 @@
   } if
 } macro
 
-'#idx '#float8 unit '#latin1-char '#float8 unit
+'default-#integral { '#float8 } macro
+'default-#rational { '#float8 } macro
+
+'#idx default-#integral unit '#latin1-char default-#integral unit
+'#B default-#integral unit
 
 '_#idx_#idx_> {
   '#float8 1 #idx unsafe-set-type-at
@@ -90,7 +110,7 @@
 '< 2 #idx poly '<= 2 #idx poly '> 2 #idx poly '>= 2 #idx poly
 'and 2 #idx poly 'or 2 #idx poly 'not 1 #idx poly
 '++ 2 #idx poly
-'repr-of 1 #idx poly 'to-quote 1 #idx poly
+'repr-of 1 #idx poly 'base-type-of 1 #idx poly 'to-quote 1 #idx poly
 'at 2 #idx poly 'len 1 #idx poly
 
 'derive {
@@ -100,7 +120,7 @@
   { i lift !cur
     name '_ cur ++ ++ :name
     body
-      cur '->repr ++ symbol block-push
+      cur '->base-type ++ symbol block-push
       i block-push
       'unsafe-set-type-at symbol block-push
     :body
@@ -143,8 +163,29 @@
   ty ty bc derive> ty ty bc derive>=
 } macro
 
-[ Note, we have to derive #idx specially because it has custom-written
-  derivations, which were necessary to support writing the derive macro itself.
+[ Other ordinary numeric types produce different units from multiplication and
+  division. These could be thought of as "geometric" numeric types: for example,
+  meters * meters = meters-square.
+]
+'derive-numeric {
+  !bc !div !mul !ty
+  ty ty ty derive+ ty ty ty derive-
+  ty ty mul derive* ty ty div derive/
+  ty ty bc derive= ty ty bc derive/=
+  ty ty bc derive< ty ty bc derive<=
+  ty ty bc derive> ty ty bc derive>=
+} macro
+
+[ Simple logical types pass types through logical operators.
+]
+'derive-logical {
+  !ty
+  ty ty ty derive-and ty ty ty derive-or ty ty derive-not
+  ty ty ty derive= ty ty ty derive/=
+} macro
+
+[ We have to derive #idx specially because it has custom-written derivations,
+  which were necessary to support writing the derive macro itself.
 ]
 '#idx '#idx '#idx derive+
 '#idx '#idx '#idx derive* '#idx '#idx '#idx derive/
@@ -152,6 +193,7 @@
 '#idx '#idx '#bc derive< '#idx '#idx '#bc derive<=
 
 '#latin1-char '#bc derive-simply-numeric
+'#B '#bc derive-simply-numeric
 
 'swap { 1 #idx lift } macro
 'type-of { 0 #idx type-at swap drop } macro
@@ -167,5 +209,5 @@
   while
 } inline
 
-'#t { 1 #bc } macro
-'#f { 0 #bc } macro
+'#true { 1 #bc } macro
+'#false { 0 #bc } macro

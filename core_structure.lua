@@ -6,7 +6,7 @@ end)
 rio_addcore("macro", function(self)
   local body = rio_pop("__block").data
   local name = rio_pop("__quote").data
-  rio_addsymbol(name, { ty="__macro", body=body,
+  rio_addsymbol(name, { ty="__macro", body=body, mut=true,
     name=name, eval = function(self)
       rio_invokeasmacro(self.name, self.body)
     end })
@@ -15,7 +15,7 @@ end)
 rio_addcore("inline", function(self)
   local body = rio_pop("__block").data
   local name = rio_pop("__quote").data
-  rio_addsymbol(name, { ty="__macro", body=body,
+  rio_addsymbol(name, { ty="__macro", body=body, mut=true,
     name=name, eval = function(self)
       rio_invokewithtrace(self.body)
     end })
@@ -25,7 +25,7 @@ rio_addcore("prefix", function(self)
   local body = rio_pop("__block").data
   local name = rio_pop("__quote").data
   if name:len() ~= 1 then invalidprefix(name) end
-  rio_addprefix(name, { ty="__macro", body=body,
+  rio_addprefix(name, { ty="__macro", body=body, mut=true,
     name=name, eval = function(self)
       rio_invokewithtrace(self.body)
     end })
@@ -37,7 +37,7 @@ rio_addcore("if", function(self)
     listpush(blocks, rio_pop("__block").data)
   end
   if blocks.n < 2 then iftooshort(blocks.n) end
-  
+
   --[[
     This may seem a bit obtuse, but the idea is that we should only
     snapshot the program state at the start of the first A-kind branch.
@@ -45,7 +45,7 @@ rio_addcore("if", function(self)
   local startbindings = nil
   local bindings = nil
   local startstack = nil
-  
+
   Y(function(f) return function(blocks)
     rio_invokewithtrace(listpop(blocks))
     local condition = rio_pop()
