@@ -80,6 +80,11 @@ function rio_addEnumeric(ty)
       eval=function(self) rio_push(self) end })
   end)
 
+  rio_addcore("_" .. ty .. "_to-quote", function(self)
+    local val = rio_pop(ty).data
+    rio_push(rio_strtoquote(tostring(math.floor(val))))
+  end)
+
   rio_addcore("___block_" .. ty .. "_push", function(self)
     local elem = rio_pop(ty)
     listpush(rio_peek("__block").data, elem)

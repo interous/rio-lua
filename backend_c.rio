@@ -87,6 +87,13 @@
   } 'quote-> type ++ symbol block-push
   macro
 
+  preface '* ++ {
+    !b !a
+    '( a to-quote " * " b to-quote ') ++ ++ ++ ++
+    b merge-aliases a merge-aliases
+  } 'quote-> type ++ symbol block-push
+  macro
+
   preface '< ++ {
     !b !a
     '( a to-quote " < " b to-quote ') ++ ++ ++ ++
@@ -181,8 +188,18 @@
 } macro
 
 'int4 'integral 4 #B 'int make-numeric-type
+'pointer 'integral pointer-size 'size_t make-numeric-type
 'ratio4 'rational 4 #B 'float make-numeric-type
 'bool make-decision-type
+'B 'pointer unit
+'idx 'pointer unit
+'B 'bool derive-simply-numeric
+'#B->B {
+  to-quote B
+} macro
+'B->#B {
+  to-quote #B
+} macro
 
 'list-type {
   !inner !outer
@@ -190,20 +207,55 @@
   inner '->repr ++ eval !inner-repr
   inner '->size ++ eval !inner-size
 
-  2 pointer-size * inner-size / !header-size
+  2 #B pointer-size * inner-size / !header-size
 
-  outer {}
-    outer block-push
-  { mangle-name !name }
+  outer { 16 B '*sz default *sz }
+    inner-size #B->B block-push
+    '* symbol block-push
+    2 #B pointer-size * #B->B block-push
+    '+ symbol block-push
+    '!actual-size symbol block-push
+    inner-repr block-push
+    '* block-push
+    '++ symbol block-push
+    'get-anonymous-name symbol block-push
+    '!name symbol block-push
     inner-repr block-push
   { "* " name '; ++ ++ ++ backend-declare
-  } ++ ++ inline
-  [ Need to finish this up, but............. named arguments? ]
+    name " = malloc(" actual-size to-quote ");" ++ ++ ++ backend-code
+    "#include <stdlib.h>" backend-include
+    '((size_t*) name ")[0] = 0;" ++ ++ backend-code
+    '((size_t*) name ")[1] = " *sz to-quote '; ++ ++ ++ ++ backend-code
+    name
+  } ++
+    outer block-push
+    'unsafe-set-type symbol block-push
+  macro
+
+  '_ outer '_len ++ ++ {
+    to-quote !name
+    '((size_t*) name ")[0]" ++ ++ quote->B
+  } macro
+
+  '_ outer '_capacity ++ ++ {
+    to-quote !name
+    '((size_t*) name ")[1]" ++ ++ quote->B
+  } macro
 
   outer '->repr ++ {}
     inner-repr block-push
     '* block-push
     '++ symbol block-push
+  macro
+  outer '->quote ++ {
+    '__quote unsafe-set-type
+  } macro
+  '_ outer '_to-quote ++ ++ {
+    '__quote unsafe-set-type
+  } macro
+  'quote-> outer ++ {}
+    outer block-push
+    'unsafe-set-type symbol block-push
   macro
 } macro
 

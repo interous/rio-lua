@@ -89,6 +89,13 @@ function notbound(name)
   os.exit(-1)
 end
 
+function stardeleteoutofscope(name)
+  print("STAR_DELETE_OUT_OF_SCOPE " .. name)
+  print("its home scope is " .. startable[name])
+  stacktrace()
+  os.exit(-1)
+end
+
 function notcommtiable(name)
   print("NOT_COMMITABLE " .. name)
   print("commitable requires _" .. name .. "_declare, _" .. name ..
@@ -123,6 +130,12 @@ end
 
 function invalidprefix(name)
   print("INVALID_PREFIX " .. name .. " (must be exactly one character)")
+  stacktrace()
+  os.exit(-1)
+end
+
+function reservedprefix(name)
+  print("RESERVED_PREFIX " .. name)
   stacktrace()
   os.exit(-1)
 end

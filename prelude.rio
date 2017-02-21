@@ -1,6 +1,39 @@
+'inc { !val val 1 val type-of eval + } macro
+'dec { !val val 1 val type-of eval - } macro
+'swap { 1 #idx lift } macro
+
+'fi { '__fi } macro
+
+[ Conceptually, for can be thought of as,
+    !body !change !check !preamble
+    preamble flatten
+    check
+    body change ++
+    while
+  Since it's inline, it's better to handle all this anonymously.
+]
+'for {
+  3 #idx lift flatten
+  swap ++
+  while
+} inline
+
+[ Conceptually, do is
+    !body !check
+    body flatten check body while
+  That is, do reverses the order from while, to signify that the body is
+  evaluated once regardless of the condition.
+]
+'do {
+  swap dup flatten
+  while
+} inline
+
 '! { bind } prefix
 '@ { commit } prefix
 '~ { delete } prefix
+'$ { '* swap ++ bind } prefix
+'% { '* swap ++ commit } prefix
 
 'rebind {
   dup delete bind
@@ -16,6 +49,20 @@
 'dup { !x x x } macro
 'drop { !x } macro
 'raw-drop { !x 'x raw-delete } macro
+
+[ Inline macro for default arguments. Conceptually, default is
+    !name !val
+    { name defined? not }
+    { val name bind }
+    if
+]
+'default {
+  dup
+  { defined? not }
+  { bind }
+  { drop drop }
+  if
+} inline
 
 'unit {
   !base !type
@@ -58,6 +105,10 @@
     '_ type '_to-quote ___quote___quote_++ ___quote___quote_++ {
       '__quote unsafe-set-type
     } macro
+    'quote-> type ___quote___quote_++ {}
+      type block-push
+      'unsafe-set-type symbol block-push
+    macro
   } if
 } macro
 
@@ -111,7 +162,7 @@
 'and 2 #idx poly 'or 2 #idx poly 'not 1 #idx poly
 '++ 2 #idx poly
 'repr-of 1 #idx poly 'base-type-of 1 #idx poly 'to-quote 1 #idx poly
-'at 2 #idx poly 'len 1 #idx poly
+'at 2 #idx poly 'len 1 #idx poly 'capacity 1 #idx poly
 
 'derive {
   !f 1 #idx - !i !res
@@ -149,6 +200,7 @@
 'derive-or { 2 #idx 'or derive } macro
 'derive-not { 1 #idx 'not derive } macro
 'derive++ { 2 #idx '++ derive } macro
+'derive-to-quote { '__quote 1 #idx 'to-quote derive } macro
 
 [ A simply-numeric type is one that has identity multiplication and division.
   This could also be thought of as "algebraic" numeric types: it's for the case
@@ -191,23 +243,14 @@
 '#idx '#idx '#idx derive* '#idx '#idx '#idx derive/
 '#idx '#idx '#bc derive= '#idx '#idx '#bc derive/=
 '#idx '#idx '#bc derive< '#idx '#idx '#bc derive<=
+'#idx derive-to-quote
 
 '#latin1-char '#bc derive-simply-numeric
+'#latin1-char derive-to-quote
 '#B '#bc derive-simply-numeric
+'#B derive-to-quote
 
-'swap { 1 #idx lift } macro
 'type-of { 0 #idx type-at swap drop } macro
-
-'inc { !val val 1 val type-of eval + } macro
-'dec { !val val 1 val type-of eval - } macro
-
-'for {
-  !body !change !check !preamble
-  preamble flatten
-  check
-  body change ++
-  while
-} inline
 
 '#true { 1 #bc } macro
 '#false { 0 #bc } macro

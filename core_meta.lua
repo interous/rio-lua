@@ -76,7 +76,7 @@ end)
 
 rio_addcore("___quote_len", function(self)
   local quote = rio_pop("__quote").data
-  rio_push({ ty="#idx", data=quote:len(), mut=true,
+  rio_push({ ty="#idx", data=quote:len(), aliases={}, mut=true,
     eval=function(self) rio_push(self) end })
 end)
 
@@ -103,7 +103,12 @@ end)
 
 rio_addcore("defined?", function(self)
   local name = rio_pop("__quote").data
-  rio_push({ ty="#bc", data=rio_nameinuse(name) ~= nil, aliases={}, mut=true,
+  rio_push({ ty="#bc", data=rio_nameinuse(name), aliases={}, mut=true,
+    eval=function(self) rio_push(self) end })
+end)
+
+rio_addcore("stack-height", function(self)
+  rio_push({ ty="#idx", data=stack.n, aliases={}, mut=true,
     eval=function(self) rio_push(self) end })
 end)
 
@@ -113,6 +118,13 @@ rio_addcore("lift", function(self)
   local elem = stack[stack.n - idx]
   for i=stack.n-idx,stack.n-1 do stack[i] = stack[i+1] end
   stack[stack.n] = elem
+end)
+
+rio_addcore("dup-at", function(self)
+  local idx = rio_pop("#idx").data
+  if idx >= stack.n or idx < 0 then outofstackbounds() end
+  local elem = stack[stack.n - idx]
+  rio_push(tablecopy(elem))
 end)
 
 rio_addcore("mangle-name", function(self)
@@ -216,4 +228,23 @@ rio_addcore("mutable?", function(self)
   local datum = rio_pop()
   rio_push({ ty="#bc", data=datum.mut, aliases={}, mut=true,
     eval=function(self) rio_push(self) end })
+end)
+
+rio_addcore("get-anonymous-name", function(self)
+  local ty = rio_sanitize(rio_pop("__quote").data)
+  local i = 0
+  while true do
+    local name = "__anonymous" .. tostring(i) .. "_" .. ty
+    if(not backendnames[name]) then
+      backendnames[name] = true
+      rio_push(rio_strtoquote(name))
+      break
+    end
+    i = i + 1
+  end
+end)
+
+rio_addcore("free-anonymous-name", function(self)
+  local name = rio_pop("__quote").data
+  backendnames[name] = nil
 end)

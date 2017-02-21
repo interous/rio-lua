@@ -3,28 +3,25 @@
 'console singleton
 
 'A 'int4 unit
-'B 'ratio4 unit
 
 'A-list 'A list-type
 
 'A 'bool derive-simply-numeric
-'B 'bool derive-simply-numeric
 
-'_A_delete { !data !name "deleting " name " which is bound to " data to-quote ++ ++ ++ print 'data raw-delete } macro
+['_A_delete { !data !name "deleting " name " which is bound to " data to-quote ++ ++ ++ print 'data raw-delete } macro]
 
 'print 'console {
   !val
   "#include <stdio.h>" backend-include
+  fi
   { val type-of '__quote = }
   { "printf(\"" val "\\n\");" ++ ++ backend-code }
   { val base-type-of 'int4 = }
   { "printf(\"%d\\n\", " val to-quote ");" ++ ++ backend-code }
-  { val base-type-of 'ratio4 = }
-  { "printf(\"%f\\n\", " val to-quote ");" ++ ++ backend-code }
+  { val base-type-of 'pointer = }
+  { "printf(\"%p\\n\", " val to-quote ");" ++ ++ backend-code }
   if
 } write
 
-{ { 5 A 5 A = 3 B 4 B = or } { "ping!" print } if
-  'a-list A-list
-  5 A @a a print
+{ 32 B @a a $sz A-list len print
 } finalize

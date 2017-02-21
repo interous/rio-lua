@@ -148,6 +148,10 @@ function tableconcat(a, b)
   return c
 end
 
+function broadfalse(v)
+  return v ~= false and v ~= nil
+end
+
 function rio_listtoblock(l)
   return { ty="__block", data=l, aliases={}, mut=true,
     eval=function(self) rio_push(rio_listtoblock(listcopy(self.data))) end }
@@ -184,6 +188,8 @@ stack = newlist()
 declarationtable = {}
 symboltable = {}
 bindingtable = {}
+startable = {}
+backendnames = {}
 prefixtable = {}
 prefixtable["'"] = { eval=function(self) end }
 
@@ -350,7 +356,9 @@ function rio_printstack(s)
 end
 
 function rio_nameinuse(name)
-  return symboltable[name] or prefixtable[name] or bindingtable[binding_prefix .. name]
+  return broadfalse(symboltable[name] or prefixtable[name] or
+    bindingtable[binding_prefix .. name] or
+    (name:sub(1, 1) == '*' and bindingtable[name]))
 end
 
 function rio_addsymbol(name, val)
@@ -368,7 +376,11 @@ end
 
 function rio_addbinding(name, val, noprefix)
   if rio_nameinuse(name) then alreadybound(name) end
-  if not noprefix then name = binding_prefix .. name end
+  if name:sub(1, 1) == '*' then
+    startable[name] = binding_prefix
+  elseif not noprefix then
+    name = binding_prefix .. name
+  end
   bindingtable[name] = val
 end
 
@@ -377,7 +389,9 @@ function rio_commit(name, val, raw, noprefix)
     rio_eval(rio_getsymbol(val.ty .. "->repr"))
     local repr = rio_pop("__quote").data
     local backend_name = ""
-    if not noprefix then backend_name = binding_prefix end
+    if not noprefix and name:sub(1, 1) ~= '*' then
+      backend_name = binding_prefix
+    end
     if raw then
       backend_name = backend_name .. name .. "__" .. rio_sanitize(repr)
     else
@@ -405,8 +419,13 @@ function rio_commit(name, val, raw, noprefix)
 end
 
 function rio_deletebinding(name, noprefix, nodestruct)
-  if not noprefix then name = binding_prefix .. name end
+  if not noprefix and name:sub(1, 1) ~= '*' then
+    name = binding_prefix .. name
+  end
   if not bindingtable[name] then notbound(name) end
+  if name:sub(1, 1) == '*' and startable[name] ~= binding_prefix then
+    stardeleteoutofscope(name)
+  end
   for i=1,stack.n do
     if stack[i].aliases[name] then rio_commitstackentry(i) end
   end
@@ -432,7 +451,8 @@ function rio_addcore(name, f)
 end
 
 function rio_getsymbol(name)
-  if bindingtable[binding_prefix .. name] then return bindingtable[binding_prefix .. name]
+  if name:sub(1, 1) == '*' and bindingtable[name] then return bindingtable[name]
+  elseif bindingtable[binding_prefix .. name] then return bindingtable[binding_prefix .. name]
   elseif symboltable[name] then return symboltable[name]
   else notbound(name) end
 end

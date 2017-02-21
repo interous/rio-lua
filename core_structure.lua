@@ -25,6 +25,7 @@ rio_addcore("prefix", function(self)
   local body = rio_pop("__block").data
   local name = rio_pop("__quote").data
   if name:len() ~= 1 then invalidprefix(name) end
+  if name == '*' then reservedprefix(name) end
   rio_addprefix(name, { ty="__macro", body=body, mut=true,
     name=name, eval = function(self)
       rio_invokewithtrace(self.body)
@@ -35,6 +36,9 @@ rio_addcore("if", function(self)
   local blocks = newlist()
   while stack.n > 0 and rio_peek().ty == "__block" do
     listpush(blocks, rio_pop("__block").data)
+  end
+  if stack.n > 0 and rio_peek().ty == "__quote" and rio_peek().data == "__fi" then
+    rio_pop()
   end
   if blocks.n < 2 then iftooshort(blocks.n) end
 
