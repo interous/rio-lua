@@ -23,5 +23,5 @@
   if
 } write
 
-{ 32 B @a a $sz A-list len print
+{ A-list !a-list a-list len print a-list capacity print
 } finalize

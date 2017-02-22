@@ -171,6 +171,12 @@ function outofquotebounds(n, i)
   os.exit(-1)
 end
 
+function outofblockbounds(n, i)
+  print("OUT_OF_BLOCK_BOUNDS upper bound: " .. tostring(n) .. ", index: " .. tostring(i))
+  stacktrace()
+  os.exit(-1)
+end
+
 function quotewronglength(q)
   print("QUOTE_WRONG_LENGTH " .. q .. " (must be exactly one character)")
   stacktrace()

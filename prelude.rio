@@ -34,6 +34,8 @@
 '~ { delete } prefix
 '$ { '* swap ++ bind } prefix
 '% { '* swap ++ commit } prefix
+'& { require-type } prefix
+'^ { "^ is reserved for injection" compile-error } prefix
 
 'rebind {
   dup delete bind
@@ -64,13 +66,16 @@
   if
 } inline
 
+[ inject macro is the preferred way of doing things like this, but inject is
+  itself dependent on having units, so this has to be done long-hand
+]
 'unit {
   !base !type
   type add-type
   type {}
-    base symbol block-push
+    base block-push-as-symbol
     type block-push
-    'unsafe-set-type symbol block-push
+    'unsafe-set-type block-push-as-symbol
   macro
   type '->base-type ___quote___quote_++ {}
     base block-push
@@ -93,11 +98,11 @@
       base '->size ++ eval block-push
     macro
     '_ type '_commit ___quote___quote_++ ___quote___quote_++ {}
-      base-commit symbol block-push
+      base-commit block-push-as-symbol
     macro
     '_ type '_declare ___quote___quote_++ ___quote___quote_++ {}
       '_ base '_declare ___quote___quote_++ ___quote___quote_++
-        symbol block-push
+        block-push-as-symbol
     macro
     type '->quote ___quote___quote_++ {
       '__quote unsafe-set-type
@@ -107,7 +112,7 @@
     } macro
     'quote-> type ___quote___quote_++ {}
       type block-push
-      'unsafe-set-type symbol block-push
+      'unsafe-set-type block-push-as-symbol
     macro
   } if
 } macro
@@ -144,15 +149,15 @@
   f { '_ }
     { i 0 #idx _#idx_#idx_> }
     { i block-push
-      'type-at symbol block-push
-      '___quote___quote_++ symbol block-push
+      'type-at block-push-as-symbol
+      '___quote___quote_++ block-push-as-symbol
       '_ block-push
-      '___quote___quote_++ symbol block-push
+      '___quote___quote_++ block-push-as-symbol
       i 1 #idx _#idx_#idx_- :i
     } while
     f block-push
-    '___quote___quote_++ symbol block-push
-    'eval symbol block-push
+    '___quote___quote_++ block-push-as-symbol
+    'eval block-push-as-symbol
   macro
 } macro
 
@@ -163,6 +168,7 @@
 '++ 2 #idx poly
 'repr-of 1 #idx poly 'base-type-of 1 #idx poly 'to-quote 1 #idx poly
 'at 2 #idx poly 'len 1 #idx poly 'capacity 1 #idx poly
+'slice 3 #idx poly
 
 'derive {
   !f 1 #idx - !i !res
@@ -171,18 +177,18 @@
   { i lift !cur
     name '_ cur ++ ++ :name
     body
-      cur '->base-type ++ symbol block-push
+      cur '->base-type ++ block-push-as-symbol
       i block-push
-      'unsafe-set-type-at symbol block-push
+      'unsafe-set-type-at block-push-as-symbol
     :body
     i 1 #idx - :i
   } while
   name '_ f ++ ++
   body
-    f symbol block-push
+    f block-push-as-symbol
     res block-push
     0 #idx block-push
-    'unsafe-set-type-at symbol block-push
+    'unsafe-set-type-at block-push-as-symbol
   macro
 } macro
 
@@ -216,16 +222,60 @@
 } macro
 
 [ Other ordinary numeric types produce different units from multiplication and
-  division. These could be thought of as "geometric" numeric types: for example,
-  meters * meters = meters-square.
+  division. Accordingly, this doesn't automatically derive * and /, but those
+  should be derived separately for valid combinations of units.
 ]
 'derive-numeric {
-  !bc !div !mul !ty
+  !bc !ty
   ty ty ty derive+ ty ty ty derive-
-  ty ty mul derive* ty ty div derive/
   ty ty bc derive= ty ty bc derive/=
   ty ty bc derive< ty ty bc derive<=
   ty ty bc derive> ty ty bc derive>=
+} macro
+
+[ Derive the standard rational, two-member relationships between two types. This
+  should only be used if the product or quotient should use a*b and a/b units.
+  For more total conversion cases, like Pa = N/m^2, derivation should be done
+  manually. Product units will always be put in order of presentation, so derive
+  statements should always put units in lexical order.
+]
+'derive-binary-ratios {
+  !kind !bc !b !a
+  a '* b ++ ++ !a*b
+  a '/ b ++ ++ !a/b
+  b '/ a ++ ++ !b/a
+  a*b kind unit a/b kind unit b/a kind unit
+  a*b a*b bc derive-numeric
+  a/b a/b bc derive-numeric
+  b/a b/a bc derive-numeric
+  a b a*b derive* b a a*b derive*
+  a b a/b derive/ b a b/a derive/
+  a b/a b derive* b/a a b derive*
+  b a/b a derive* a/b b a derive*
+  a a/b b derive/ b b/a a derive/
+  a*b b a derive/ a*b a b derive/
+} macro
+
+[ Converts an E-type into an A-type with corresponding names. ]
+'derive-realization {
+  !ty
+  '# ty '-> ty ++ ++ ++ { to-quote }
+    ty block-push-as-symbol
+  macro
+} macro
+
+[ This converts combinations of E-type pairs to A-type pairs. ]
+'derive-binary-realizations {
+  !b !a
+  '# a '*# b '-> a '* b ++ ++ ++ ++ ++ ++ ++ { to-quote }
+    a '* b ++ ++ block-push-as-symbol
+  macro
+  '# a '/# b '-> a '/ b ++ ++ ++ ++ ++ ++ ++ { to-quote }
+    a '/ b ++ ++ block-push-as-symbol
+  macro
+  '# b '/# a '-> b '/ a ++ ++ ++ ++ ++ ++ ++ { to-quote }
+    b '/ a ++ ++ block-push-as-symbol
+  macro
 } macro
 
 [ Simple logical types pass types through logical operators.
@@ -240,17 +290,52 @@
   which were necessary to support writing the derive macro itself.
 ]
 '#idx '#idx '#idx derive+
-'#idx '#idx '#idx derive* '#idx '#idx '#idx derive/
 '#idx '#idx '#bc derive= '#idx '#idx '#bc derive/=
 '#idx '#idx '#bc derive< '#idx '#idx '#bc derive<=
 '#idx derive-to-quote
 
 '#latin1-char '#bc derive-simply-numeric
 '#latin1-char derive-to-quote
-'#B '#bc derive-simply-numeric
+'#B '#bc derive-numeric
 '#B derive-to-quote
+
+'#B '#idx '#bc '#float8 derive-binary-ratios
+'#B*#idx derive-to-quote '#B/#idx derive-to-quote '#idx/#B derive-to-quote
 
 'type-of { 0 #idx type-at swap drop } macro
 
 '#true { 1 #bc } macro
 '#false { 0 #bc } macro
+
+'head { 0 #idx at } macro
+'tail { 1 #idx -1 #idx slice } macro
+
+'if2 { fi 2 #idx lift 2 #idx lift if } inline
+'if3 { fi 3 #idx lift 3 #idx lift 3 #idx lift if } inline
+
+'inject { binding-prefix _inject } inline
+
+'_inject {
+  !bp &__block !data
+  {} !res
+  { 0 #idx !i } { i data len < } { i inc :i }
+  { fi
+    { data i type-in-block '__symbol = }
+    { data i at-as-quote !cur
+      { cur head '^ quote->char = }
+      { bp cur tail ++ !rest
+        { rest fqn-defined? not }
+        { "UNKNOWN_SYMBOL_IN_INJECTION " rest ++ compile-error }
+        if2
+        res rest get-by-fqn block-push :res
+      }
+      { res cur block-push-as-symbol :res }
+      if3
+    }
+    { data i type-in-block '__block = }
+    { res data i at bp _inject block-push :res }
+    { res data i at block-push :res }
+    if
+  } for
+  res
+} macro

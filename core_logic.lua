@@ -1,4 +1,4 @@
-rio_addcore("^decision-type", function(self)
+rio_addcore("decision-type", function(self)
   rio_makedecisiontype(rio_pop("__quote").data, "A")
 end)
 

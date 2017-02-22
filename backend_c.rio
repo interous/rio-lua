@@ -37,44 +37,23 @@
 'make-numeric-type {
   !repr '#B require-type !size !kind !type
   type add-type
-  type {}
-    'dup symbol block-push
-    'check- kind ++ symbol block-push
-    'quote-> type ++ symbol block-push
-  macro
-  type '->quote ++ {
-    '__quote unsafe-set-type
-  } macro
-  '_ type '_to-quote ++ ++ {
-    '__quote unsafe-set-type
-  } macro
-  'quote-> type ++ {}
-    type block-push
-    'unsafe-set-type symbol block-push
-  macro
-  type '->repr ___quote___quote_++ {}
-    repr block-push
-  macro
-  '_ type '_repr-of ___quote___quote_++ ___quote___quote_++ { drop }
-    repr block-push
-  macro
-  type '->size ++ {}
-    size block-push
-  macro
-  '_ type '_size-of ++ ++ { drop }
-    size block-push
-  macro
+  type { dup 'check- ^kind ++ eval 'quote-> ^type ++ eval } inject macro
+
+  type '->quote ++ { '__quote unsafe-set-type } macro
+  '_ type '_to-quote ++ ++ { '__quote unsafe-set-type } macro
+  'quote-> type ++ { ^type unsafe-set-type } inject macro
+  type '->repr ___quote___quote_++ { ^repr } inject macro
+  '_ type '_repr-of ___quote___quote_++ ___quote___quote_++ {
+    drop ^repr
+  } inject macro
+  type '->size ++ { ^size } inject macro
+  '_ type '_size-of ++ ++ { drop ^size } inject macro
 
   '_ type '_ type '_ ++ ++ ++ ++ !preface
 
-  '_ type '_declare ++ ++ {}
-    repr " " ++ block-push
-    'swap symbol block-push
-    ";" block-push
-    '++ symbol block-push
-    '++ symbol block-push
-    'backend-declare symbol block-push
-  macro
+  '_ type '_declare ++ ++ {
+    ^repr " " ++ swap '; ++ ++ backend-declare
+  } inject macro
   '_ type '_commit ++ ++ {
     !val !name
     name " = " val to-quote '; ++ ++ ++ backend-code
@@ -84,62 +63,58 @@
     !b !a
     '( a to-quote " + " b to-quote ') ++ ++ ++ ++
     b merge-aliases a merge-aliases
-  } 'quote-> type ++ symbol block-push
-  macro
+    'quote-> ^type ++ eval
+  } inject macro
 
   preface '* ++ {
     !b !a
     '( a to-quote " * " b to-quote ') ++ ++ ++ ++
     b merge-aliases a merge-aliases
-  } 'quote-> type ++ symbol block-push
-  macro
+    'quote-> ^type ++ eval
+  } inject macro
 
   preface '< ++ {
     !b !a
     '( a to-quote " < " b to-quote ') ++ ++ ++ ++
     b merge-aliases a merge-aliases
-  } 'quote-> type ++ symbol block-push
-  macro
+    'quote-> ^type ++ eval
+  } inject macro
 
   preface '= ++ {
     !b !a
     '( a to-quote " == " b to-quote ') ++ ++ ++ ++
     b merge-aliases a merge-aliases
-  } 'quote-> type ++ symbol block-push
-  macro
+    'quote-> ^type ++ eval
+  } inject macro
 
   preface '/= ++ {
     !b !a
     '( a to-quote " != " b to-quote ') ++ ++ ++ ++
     b merge-aliases a merge-aliases
-  } 'quote-> type ++ symbol block-push
-  macro
+    'quote-> ^type ++ eval
+  } inject macro
 } macro
 
 'make-decision-type {
   !type
   type add-type
-  type ^decision-type
+  type decision-type
   type {
     !val
     { val '0 /= val '1 /= and }
     { "Invalid literal to decision constructor; must be 0 or 1" compile-error }
     if
-    val
-  } 'quote-> type ++ symbol block-push
-  macro
+    val 'quote-> ^type ++ eval
+  } inject macro
   type '->quote ++ {
     '__quote unsafe-set-type
   } macro
   '_ type '_to-quote ++ ++ {
     '__quote unsafe-set-type
   } macro
-  'quote-> type ++ {}
-    type block-push
-    'unsafe-set-type symbol block-push
-  macro
+  'quote-> type ++ { ^type unsafe-set-type } inject macro
 
-  [ Assume we're using int as the underlying decision type ]
+  [ We're using int as the underlying decision type ]
   type '->size ++ { 4 #B } macro
   '_ type '_size-of ++ ++ { drop 4 #B } macro
 
@@ -157,34 +132,36 @@
     !b !a
     '( a to-quote " && " b to-quote ') ++ ++ ++ ++
     b merge-aliases a merge-aliases
-  } 'quote-> type ++ symbol block-push
-  macro
+    'quote-> ^type ++ eval
+  } inject macro
 
   preface 'or ++ {
     !b !a
     '( a to-quote " || " b to-quote ') ++ ++ ++ ++
     b merge-aliases a merge-aliases
-  } 'quote-> type ++ symbol block-push
-  macro
+    'quote-> ^type ++ eval
+  } inject macro
 
   preface 'not ++ {
+    !a
     '!( swap to-quote ') ++ ++
-  } 'quote-> type ++ symbol block-push
-  macro
+    a merge-aliases
+    'quote-> ^type ++ eval
+  } inject macro
 
   preface '= ++ {
     !b !a
     '( a to-quote " == " b to-quote ') ++ ++ ++ ++
     b merge-aliases a merge-aliases
-  } 'quote-> type ++ symbol block-push
-  macro
+    'quote-> ^type ++ eval
+  } inject macro
 
   preface '/= ++ {
     !b !a
     '( a to-quote " != " b to-quote ') ++ ++ ++ ++
     b merge-aliases a merge-aliases
-  } 'quote-> type ++ symbol block-push
-  macro
+    'quote-> ^type ++ eval
+  } inject macro
 } macro
 
 'int4 'integral 4 #B 'int make-numeric-type
@@ -193,70 +170,48 @@
 'bool make-decision-type
 'B 'pointer unit
 'idx 'pointer unit
-'B 'bool derive-simply-numeric
-'#B->B {
-  to-quote B
-} macro
-'B->#B {
-  to-quote #B
-} macro
+'B 'bool derive-numeric
+'idx 'bool derive-numeric
+'B 'idx 'bool 'pointer derive-binary-ratios
+'B derive-realization
+'idx derive-realization
+'B 'idx derive-binary-realizations
 
 'list-type {
   !inner !outer
   outer add-type
   inner '->repr ++ eval !inner-repr
-  inner '->size ++ eval !inner-size
+  inner '->size ++ eval #B->B !inner-size
+  2 #idx pointer-size * #B*#idx->B*idx !header-size
 
-  2 #B pointer-size * inner-size / !header-size
+  [2 #B pointer-size * inner-size / !header-size]
 
-  outer { 16 B '*sz default *sz }
-    inner-size #B->B block-push
-    '* symbol block-push
-    2 #B pointer-size * #B->B block-push
-    '+ symbol block-push
-    '!actual-size symbol block-push
-    inner-repr block-push
-    '* block-push
-    '++ symbol block-push
-    'get-anonymous-name symbol block-push
-    '!name symbol block-push
-    inner-repr block-push
-  { "* " name '; ++ ++ ++ backend-declare
+  outer {
+    16 idx '*sz default
+    *sz ^inner-size * ^header-size + !actual-size
+    get-anonymous-name !name
+    ^inner-repr "* " name '; ++ ++ ++ backend-declare
     name " = malloc(" actual-size to-quote ");" ++ ++ ++ backend-code
     "#include <stdlib.h>" backend-include
     '((size_t*) name ")[0] = 0;" ++ ++ backend-code
     '((size_t*) name ")[1] = " *sz to-quote '; ++ ++ ++ ++ backend-code
-    name
-  } ++
-    outer block-push
-    'unsafe-set-type symbol block-push
-  macro
+    name ^outer unsafe-set-type
+  } inject macro
 
   '_ outer '_len ++ ++ {
     to-quote !name
-    '((size_t*) name ")[0]" ++ ++ quote->B
+    '((size_t*) name ")[0]" ++ ++ quote->idx
   } macro
 
   '_ outer '_capacity ++ ++ {
     to-quote !name
-    '((size_t*) name ")[1]" ++ ++ quote->B
+    '((size_t*) name ")[1]" ++ ++ quote->idx
   } macro
 
-  outer '->repr ++ {}
-    inner-repr block-push
-    '* block-push
-    '++ symbol block-push
-  macro
-  outer '->quote ++ {
-    '__quote unsafe-set-type
-  } macro
-  '_ outer '_to-quote ++ ++ {
-    '__quote unsafe-set-type
-  } macro
-  'quote-> outer ++ {}
-    outer block-push
-    'unsafe-set-type symbol block-push
-  macro
+  outer '->repr ++ { ^inner-repr '* ++ } inject macro
+  outer '->quote ++ { '__quote unsafe-set-type } macro
+  '_ outer '_to-quote ++ ++ { '__quote unsafe-set-type } macro
+  'quote-> outer ++ { ^outer unsafe-set-type } inject macro
 } macro
 
 'backend-finalize {

@@ -21,8 +21,18 @@ rio_addcore("backend-include", function(self)
 end)
 
 rio_addcore("eval", function(self)
-  local quote = rio_pop("__quote").data
-  rio_eval(rio_strtosymbol(quote, rio_errorbase.file, rio_errorbase.line, rio_errorbase.col))
+  local datum = rio_pop()
+  if datum.ty == "__quote" then
+    rio_eval(rio_strtosymbol(datum.data, rio_errorbase.file, rio_errorbase.line, rio_errorbase.col))
+  elseif datum.ty == "__symbol" then
+    rio_eval(datum)
+  end
+end)
+
+rio_addcore("get-by-fqn", function(self)
+  local name = rio_pop("__quote").data
+  if not bindingtable[name] then notbound(name) end
+  rio_push(bindingtable[name])
 end)
 
 rio_addcore("flatten", function(self)
@@ -53,14 +63,6 @@ rio_addcore("___quote___quote_/=", function(self)
     eval = function(self) rio_push(self) end })
 end)
 
-rio_addcore("___quote_#idx_at", function(self)
-  local idx = rio_pop("#idx").data + 1
-  local quote = rio_pop("__quote").data
-  if idx < 0 or idx > quote:len() then outofquotebounds(quote, idx) end
-  rio_push({ ty="#latin1-char", data=quote:byte(idx), mut=true,
-    eval = function(self) rio_push(self) end })
-end)
-
 rio_addcore("quote->char", function(self)
   local quote = rio_pop("__quote").data
   if quote:len() ~= 1 then quotewronglength(quote) end
@@ -80,9 +82,59 @@ rio_addcore("___quote_len", function(self)
     eval=function(self) rio_push(self) end })
 end)
 
+rio_addcore("___quote_#idx_at", function(self)
+  local idx = rio_pop("#idx").data + 1
+  local quote = rio_pop("__quote").data
+  if idx < 0 or idx > quote:len() then outofquotebounds(quote, idx) end
+  rio_push({ ty="#latin1-char", data=quote:byte(idx), mut=true,
+    eval = function(self) rio_push(self) end })
+end)
+
+rio_addcore("___quote_#idx_#idx_slice", function(self)
+  local b = rio_pop("#idx").data
+  local a = rio_pop("#idx").data
+  if a >= 0 then a = a + 1 end
+  if b >= 0 then b = b + 1 end
+  local quote = rio_pop("__quote").data
+  rio_push(rio_strtoquote(quote:sub(a, b)))
+end)
+
 rio_addcore("block-push", function(self)
   local elem = rio_pop()
   listpush(rio_peek("__block").data, elem)
+end)
+
+rio_addcore("block-push-as-symbol", function(self)
+  local elem = rio_pop("__quote").data
+  listpush(rio_peek("__block").data, rio_strtosymbol(elem))
+end)
+
+rio_addcore("___block_#idx_at", function(self)
+  local idx = rio_pop("#idx").data + 1
+  local block = rio_pop("__block").data
+  if idx < 0 or idx > block.n then outofblockbounds(block.n, idx) end
+  rio_eval(block[idx])
+end)
+
+rio_addcore("at-as-quote", function(self)
+  local idx = rio_pop("#idx").data + 1
+  local block = rio_pop("__block").data
+  if idx < 0 or idx > block.n then outofblockbounds(block.n, idx) end
+  rio_requiretype(block[idx], "__symbol")
+  rio_push(rio_strtoquote(block[idx].data))
+end)
+
+rio_addcore("type-in-block", function(self)
+  local idx = rio_pop("#idx").data + 1
+  local block = rio_pop("__block").data
+  if idx < 0 or idx > block.n then outofblockbounds(block.n, idx) end
+  rio_push(rio_strtoquote(block[idx].ty))
+end)
+
+rio_addcore("___block_len", function(self)
+  local block = rio_pop("__block").data
+  rio_push({ ty="#idx", data=block.n, aliases={}, mut=true,
+    eval=function(self) rio_push(self) end })
 end)
 
 rio_addcore("___block___block_++", function(self)
@@ -91,19 +143,15 @@ rio_addcore("___block___block_++", function(self)
   rio_push(rio_listtoblock(tableconcat(a, b)))
 end)
 
-rio_addcore("quote", function(self)
-  local quote = tablecopy(rio_pop("__quote"))
-  quote.data = "'" .. quote.data
-  rio_push(quote)
-end)
-
-rio_addcore("symbol", function(self)
-  rio_push(rio_strtosymbol(rio_pop("__quote").data))
-end)
-
 rio_addcore("defined?", function(self)
   local name = rio_pop("__quote").data
   rio_push({ ty="#bc", data=rio_nameinuse(name), aliases={}, mut=true,
+    eval=function(self) rio_push(self) end })
+end)
+
+rio_addcore("fqn-defined?", function(self)
+  local name = rio_pop("__quote").data
+  rio_push({ ty="#bc", data=broadfalse(bindingtable[name]), aliases={}, mut=true,
     eval=function(self) rio_push(self) end })
 end)
 
@@ -133,6 +181,10 @@ rio_addcore("mangle-name", function(self)
   rio_eval(rio_getsymbol(ty .. "->repr"))
   local repr = rio_sanitize(rio_pop("__quote").data)
   rio_push(rio_strtoquote(binding_prefix .. name .. "__" .. repr))
+end)
+
+rio_addcore("binding-prefix", function(self)
+  rio_push(rio_strtoquote(binding_prefix))
 end)
 
 rio_addcore("add-type", function(self)
@@ -188,8 +240,15 @@ rio_addcore("print-stack", function(self)
   rio_printstack()
 end)
 
-rio_addcore("print-immediate", function(self)
-  print(rio_pop("__quote").data)
+rio_addcore("#print", function(self)
+  local datum = rio_pop()
+  if datum.ty == "__quote" then
+    print(datum.data)
+  elseif datum.ty == "__block" then
+    print(rio_blocktostring(datum))
+  else
+    print(datum.ty .. ", " .. tostring(datum.data))
+  end
 end)
 
 rio_addcore("set-backend-indent", function(self)

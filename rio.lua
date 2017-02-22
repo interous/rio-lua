@@ -355,6 +355,18 @@ function rio_printstack(s)
   end
 end
 
+function rio_blocktostring(block)
+  local res = {}
+  for i = 1, block.data.n do
+    if block.data[i].ty == "__block" then
+      table.insert(res, rio_blocktostring(block.data[i]))
+    else
+      table.insert(res, block.data[i].ty .. ", " .. tostring(block.data[i].data))
+    end
+  end
+  return "{" .. table.concat(res, "; ") .. "}"
+end
+
 function rio_nameinuse(name)
   return broadfalse(symboltable[name] or prefixtable[name] or
     bindingtable[binding_prefix .. name] or
