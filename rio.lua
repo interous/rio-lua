@@ -192,6 +192,7 @@ startable = {}
 backendnames = {}
 prefixtable = {}
 prefixtable["'"] = { eval=function(self) end }
+toplevel = true
 
 --require ("backend_" .. backend)
 
@@ -517,7 +518,14 @@ end
 function rio_eval(blob)
   if not blob then
     local fd = assert(io.open(string.sub(arg[1], 1, -4) .. backend, "w"))
-    fd:write(table.concat(preamble, ""))
+    local flatpreamble = {}
+    local levels = {}
+    for level in pairs(preamble) do table.insert(levels, level) end
+    table.sort(levels)
+    for _,level in ipairs(levels) do
+      table.insert(flatpreamble, table.concat(preamble[level], ""))
+    end
+    fd:write(table.concat(flatpreamble, "\n"))
     fd:write("\n")
     fd:write(table.concat(body, ""))
     fd:write("\n")
@@ -526,7 +534,7 @@ function rio_eval(blob)
     rio_eval(rio_getsymbol("backend-finalize"))
     fd:write(rio_pop("__quote").data)
     fd:close()
-  elseif blob.ty == "__symbol" and prefixtable[blob.data:sub(1, 1)] then
+  elseif blob.ty == "__symbol" and blob.data:len() > 1 and prefixtable[blob.data:sub(1, 1)] then
     rio_push(rio_strtoquote(blob.data:sub(2, -1)))
     prefixtable[blob.data:sub(1, 1)]:eval()
   else

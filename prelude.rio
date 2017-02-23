@@ -1,6 +1,25 @@
-'inc { !val val 1 val type-of eval + } macro
-'dec { !val val 1 val type-of eval - } macro
 'swap { 1 #idx lift } macro
+
+[ The empty type is uninhabited; it could also be called the unit type (as in,
+  e.g., Haskell and F#) but that name refers to units of measure in Rio. The
+  primary purpose of the empty type is for discriminated unions to have an
+  uninhabited clause, i.e., for things like Haskell's Maybe type or, more
+  broadly, for "formally" nullable union types.
+
+  Note that nothing can really be done with the empty type, so macros that
+  enumerate types ought to be prepared for that possibility. In particular, this
+  means that union "kinds" should generally only be created by people who know
+  what they're doing.
+]
+'empty add-type
+'empty { ' 'empty unsafe-set-type } macro
+
+'reserve-name {
+  !name
+  name {
+    "the name " ^name " should not be used" ++ ++ compile-error
+  } inject macro
+} macro
 
 'fi { '__fi } macro
 
@@ -33,7 +52,6 @@
 '@ { commit } prefix
 '~ { delete } prefix
 '$ { '* swap ++ bind } prefix
-'% { '* swap ++ commit } prefix
 '& { require-type } prefix
 '^ { "^ is reserved for injection" compile-error } prefix
 
@@ -47,6 +65,9 @@
 
 ': { rebind } prefix
 '; { recommit } prefix
+
+'#inc { dup eval 1 #idx + swap rebind } inline
+'#dec { dup eval 1 #idx - swap rebind } inline
 
 'dup { !x x x } macro
 'drop { !x } macro
@@ -122,6 +143,7 @@
 
 '#idx default-#integral unit '#latin1-char default-#integral unit
 '#B default-#integral unit
+'#level default-#integral unit
 
 '_#idx_#idx_> {
   '#float8 1 #idx unsafe-set-type-at
@@ -161,7 +183,7 @@
   macro
 } macro
 
-'+ 2 #idx poly '- 2 #idx poly '* 2 #idx poly '/ 2 #idx poly
+'+ 2 #idx poly '- 2 #idx poly '* 2 #idx poly '/ 2 #idx poly '% 2 #idx poly
 '= 2 #idx poly '/= 2 #idx poly
 '< 2 #idx poly '<= 2 #idx poly '> 2 #idx poly '>= 2 #idx poly
 'and 2 #idx poly 'or 2 #idx poly 'not 1 #idx poly
@@ -196,6 +218,7 @@
 'derive- { 2 #idx '- derive } macro
 'derive* { 2 #idx '* derive } macro
 'derive/ { 2 #idx '/ derive } macro
+'derive% { 2 #idx '% derive } macro
 'derive= { 2 #idx '= derive } macro
 'derive/= { 2 #idx '/= derive } macro
 'derive< { 2 #idx '< derive } macro
@@ -215,7 +238,7 @@
 'derive-simply-numeric {
   !bc !ty
   ty ty ty derive+ ty ty ty derive-
-  ty ty ty derive* ty ty ty derive/
+  ty ty ty derive* ty ty ty derive/ ty ty ty derive%
   ty ty bc derive= ty ty bc derive/=
   ty ty bc derive< ty ty bc derive<=
   ty ty bc derive> ty ty bc derive>=
@@ -245,9 +268,9 @@
   a '/ b ++ ++ !a/b
   b '/ a ++ ++ !b/a
   a*b kind unit a/b kind unit b/a kind unit
-  a*b a*b bc derive-numeric
-  a/b a/b bc derive-numeric
-  b/a b/a bc derive-numeric
+  a*b bc derive-numeric
+  a/b bc derive-numeric
+  b/a bc derive-numeric
   a b a*b derive* b a a*b derive*
   a b a/b derive/ b a b/a derive/
   a b/a b derive* b/a a b derive*
@@ -293,11 +316,15 @@
 '#idx '#idx '#bc derive= '#idx '#idx '#bc derive/=
 '#idx '#idx '#bc derive< '#idx '#idx '#bc derive<=
 '#idx derive-to-quote
+'#idx '#idx '#idx derive*
+'#idx '#idx '#idx derive%
 
 '#latin1-char '#bc derive-simply-numeric
 '#latin1-char derive-to-quote
 '#B '#bc derive-numeric
 '#B derive-to-quote
+'#level '#bc derive-numeric
+'#level derive-to-quote
 
 '#B '#idx '#bc '#float8 derive-binary-ratios
 '#B*#idx derive-to-quote '#B/#idx derive-to-quote '#idx/#B derive-to-quote
@@ -318,7 +345,7 @@
 '_inject {
   !bp &__block !data
   {} !res
-  { 0 #idx !i } { i data len < } { i inc :i }
+  { 0 #idx !i } { i data len < } { 'i #inc }
   { fi
     { data i type-in-block '__symbol = }
     { data i at-as-quote !cur

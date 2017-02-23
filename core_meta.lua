@@ -12,12 +12,11 @@ rio_addcore("backend-declare", function(self)
   table.insert(curdecls, indent_level .. decl .. "\n")
 end)
 
-rio_addcore("backend-include", function(self)
-  local file = rio_pop("__quote").data
-  if not includes[file] then
-    table.insert(preamble, file .. "\n")
-    includes[file] = true
-  end
+rio_addcore("backend-header", function(self)
+  local level = rio_pop("#level").data
+  local text = rio_pop("__quote").data
+  if not preamble[level] then preamble[level] = {} end
+  table.insert(preamble[level], text .. "\n")
 end)
 
 rio_addcore("eval", function(self)
@@ -229,6 +228,18 @@ rio_addcore("require-type", function(self)
   rio_requiretype(datum, ty)
 end)
 
+rio_addcore("type-mismatch", function(self)
+  local actual = rio_pop("__quote").data
+  local expected = rio_pop("__quote").data
+  wrongtype(expected, actual)
+end)
+
+rio_addcore("is-type?", function(self)
+  local ty = rio_pop("__quote").data
+  rio_push({ ty="#bc", data=types[ty] ~= nil, aliases={}, mut=true,
+    eval=function(self) rio_push(self) end })
+end)
+
 rio_addcore("print-aliases", function(self)
   local val = rio_pop()
   local output = {}
@@ -306,4 +317,17 @@ end)
 rio_addcore("free-anonymous-name", function(self)
   local name = rio_pop("__quote").data
   backendnames[name] = nil
+end)
+
+rio_addcore("top-level?", function(self)
+  rio_push({ ty="#bc", data=toplevel, aliases={}, mut=true,
+    eval=function(self) rio_push(self) end })
+end)
+
+rio_addcore("require-top-level", function(self)
+  if not toplevel then mustbetoplevel() end
+end)
+
+rio_addcore("require-not-top-level", function(self)
+  if toplevel then mustnotbetoplevel() end
 end)

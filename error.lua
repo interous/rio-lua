@@ -188,3 +188,15 @@ function charoutofbounds(c)
   stacktrace()
   os.exit(-1)
 end
+
+function mustbetoplevel()
+  print("MUST_BE_TOP_LEVEL")
+  stacktrace()
+  os.exit(-1)
+end
+
+function mustnotbetoplevel()
+  print("MUST_NOT_BE_TOP_LEVEL")
+  stacktrace()
+  os.exit(-1)
+end

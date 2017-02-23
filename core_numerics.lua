@@ -38,6 +38,13 @@ function rio_addEnumeric(ty)
       eval=function(self) rio_push(self) end })
   end)
 
+  rio_addcore(namebase .. "%", function(self)
+    local b = rio_pop(ty).data
+    local a = rio_pop(ty).data
+    rio_push({ ty=ty, data=a%b, aliases={}, mut=true,
+      eval=function(self) rio_push(self) end })
+  end)
+
   rio_addcore(namebase .. "=", function(self)
     local b = rio_pop(ty).data
     local a = rio_pop(ty).data

@@ -2,12 +2,26 @@
 
 "  " set-backend-indent
 
+[ Header wrappers ]
+'C-include { 1 #level backend-header } macro
+'C-type { 2 #level backend-header } macro
+
+'size-of 1 #idx poly
+
+'backend-include {
+  !name
+  { '__ name ++ defined? not }
+  { '__ name ++ reserve-name
+    name C-include
+  } if2
+} macro
+
 'check-rational {
   !lit 0 #idx !i
   #false !found-dot
-  { lit i at '- quote->char = } { i inc :i } if
+  { lit i at '- quote->char = } { 'i #inc } if
 
-  { } { i lit len < } { i inc :i }
+  { } { i lit len < } { 'i #inc }
   { lit i at !cur
     { cur '. quote->char = found-dot and }
     { "Failed to parse " lit " as rational (found two dots)" ++ ++
@@ -23,9 +37,9 @@
 
 'check-integral {
   !lit 0 #idx !i
-  { lit i at '- quote->char = } { i inc :i } if
+  { lit i at '- quote->char = } { 'i #inc } if
 
-  { } { i lit len < } { i inc :i }
+  { } { i lit len < } { 'i #inc }
   { lit i at !cur
     { cur '0 quote->char < cur '9 quote->char > or }
     { "Failed to parse " lit " as integral: " cur char->quote " not a digit"
@@ -177,7 +191,164 @@
 'idx derive-realization
 'B 'idx derive-binary-realizations
 
-'list-type {
+'inc { dup eval 1 idx + swap rebind } inline
+'dec { dup eval 1 idx - swap rebind } inline
+
+[ The following DU-support algorithms are all linear or quadratic, when they
+  could be logarithmic or n*log(n), because the expectation is for DUs to
+  enumerate a small number of types. Given this, the actual performance should
+  be better, since we don't need to do lots of macro recursion.
+]
+
+'find-quote-in-block {
+  !quote !block
+  { -1 #idx !res 0 #idx !i } { i block len < res 0 #idx < and } { 'i #inc }
+  { { block i type-in-block '__quote = }
+    { { block i at quote = }
+      { i :res } if2
+    } if2
+  } for
+  res
+} macro
+
+'require-all-unique-quotes {
+  !block
+  { 0 #idx !i } { i block len < } { 'i #inc }
+  { { block i type-in-block '__quote /= }
+    { '__quote block i type-in-block type-mismatch } if2
+  } for
+
+  { 0 #idx :i } { i block len < } { 'i #inc }
+  { { i 1 #idx + !j } { j block len < } { 'j #inc }
+    { { block i at block j at = }
+      { "block must contain all unique entries, found duplication of "
+        block i at ++ compile-error
+      } if2
+    } for
+  } for
+  block
+} macro
+
+'du {
+  require-top-level
+  require-all-unique-quotes !types !type
+
+  { 0 #idx !i } { i types len < } { 'i #inc }
+  { { types i at is-type? not }
+    { types i at " is not a type" ++ compile-error
+    } if2
+  } for
+
+  { '__du defined? not }
+  { '__du reserve-name
+    "struct __du {" C-type
+    "  size_t type_id;" C-type
+    "  void* blob;" C-type
+    "};" C-type
+  } if2
+
+  type {
+    !datum
+    ^types datum type-of find-quote-in-block !pos
+    { pos 0 #idx < }
+    { datum type-of " is not a member of " ^type ++ ++ compile-error } if2
+
+    '__du get-anonymous-name !name
+    "#include <stdlib.h>" backend-include
+    "struct __du* " name '; ++ ++ backend-declare
+    name " = malloc(sizeof(struct __du));" ++ backend-code
+    name "->type_id = " pos to-quote '; ++ ++ ++ backend-code
+    fi
+    { datum type-of 'empty = }
+    { "// a DU is being \"assigned\" an empty type here" backend-code }
+    { datum size-of pointer-size /= }
+    { name "->blob = (void*)(size_t)" datum to-quote '; ++ ++ ++ backend-code }
+    { name "->blob = (void*)" datum to-quote '; ++ ++ ++ backend-code }
+    if
+    name ^type unsafe-set-type
+  } inject macro
+
+  '_ type '_match ++ ++ {
+    !union !depth
+    {}
+    { 0 #idx !i } { i depth < } { 'i #inc } { swap block-push } for
+    !data
+    fi
+    { ^types len 2 #idx * depth = }
+    { fi
+      { 0 #idx :i } { i data len < } { i 2 #idx + :i }
+      { data i at !cur-type
+        data i 1 #idx + at !cur-block
+        ^types cur-type find-quote-in-block !type-id
+        { type-id 0 #idx < }
+        { cur-type " is not a member of " ^type ++ ++ compile-error } if2
+
+        {} type-id #idx->idx block-push
+        { union to-quote '->type_id ++ quote->idx = } ++
+        { cur-type 'empty = }
+        { cur-block }
+        { {} cur-type block-push
+          { !cur-type '(( cur-type '->repr ++ eval
+            { cur-type '->size ++ eval pointer-size /= }
+            { ')(size_t ++ } if2
+            ') union to-quote '->blob) ++ ++ ++ ++
+            cur-type unsafe-set-type
+          } cur-block ++ ++
+        } if3
+      } for
+      if
+    }
+    { depth ^types len 2 #idx * < }
+    { { depth 2 #idx % 0 #idx = }
+      { "match must either cover all cases, or have an odd number of clauses"
+        compile-error
+      } if2
+      fi
+      { 0 #idx :i } { i data len 1 #idx - < } { i 2 #idx + :i }
+      { data i at !cur-type
+        data i 1 #idx + at !cur-block
+        ^types cur-type find-quote-in-block !type-id
+        { type-id 0 #idx < }
+        { cur-type " is not a member of " ^type ++ ++ compile-error } if2
+
+        {} type-id #idx->idx block-push
+        { union to-quote '->type_id ++ quote->idx = } ++
+        { cur-type 'empty = }
+        { cur-block }
+        { {} cur-type block-push
+          { !cur-type '(( cur-type '->repr ++ eval
+            { cur-type '->size ++ eval pointer-size /= }
+            { ')(size_t ++ } if2
+            ') union to-quote '->blob) ++ ++ ++ ++
+            cur-type unsafe-set-type
+          } cur-block ++ ++
+        } if3
+      } for
+      { union } data data len 1 #idx - at ++
+      if
+    }
+    { "attempting to match more types than the DU enumerates" compile-error }
+    if
+  } inject macro
+
+  '_ type '_to-quote ++ ++ { '__quote unsafe-set-type } inject macro
+} macro
+
+'match {
+  {} !data
+  #false !done
+  { done not }
+  { !atom
+    { atom type-of '__quote = atom type-of '__block = or }
+    { data atom block-push :data }
+    { { 0 #idx !i } { i data len < } { 'i #inc } { data i at } for
+      data len atom '_ atom type-of '_match ++ ++ eval
+      #true :done
+    } if3
+  } while
+} macro
+
+'list {
   !inner !outer
   outer add-type
   inner '->repr ++ eval !inner-repr

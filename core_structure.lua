@@ -161,7 +161,10 @@ rio_addcore("finalize", function(self)
   indent_level = indent_step
   local old_prefix = binding_prefix
   binding_prefix = "__finalize__"
+  if not toplevel then mustbetoplevel() end
+  toplevel = false
   rio_invokewithtrace(body)
+  toplevel = true
   binding_prefix = old_prefix
   finalize_decls = table.concat(curdecls, "")
   finalize_body = table.concat(curbody, "")
