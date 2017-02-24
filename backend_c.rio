@@ -387,7 +387,7 @@
       { raw-drop }
       if
 
-      name free-anonymous-name
+      data to-quote free-anonymous-name
       'free( data to-quote '); ++ ++ backend-code
     } if2
     'data raw-delete
