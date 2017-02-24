@@ -47,6 +47,7 @@ rio_addcore("if", function(self)
     snapshot the program state at the start of the first A-kind branch.
   ]]--
   local startbindings = nil
+  local startbackends = nil
   local bindings = nil
   local startstack = nil
 
@@ -75,11 +76,13 @@ rio_addcore("if", function(self)
       indent_level = indent_level .. indent_step
       if not startstack then startstack = rio_stackcopy() end
       if not startbindings then startbindings = rio_bindingtablecopy() end
+      if not startbackends then startbackends = tablecopy(backendnames) end
       rio_invokewithtrace(listpop(blocks))
       rio_commitstack()
       rio_collapsebindings(startbindings)
       local truestack = rio_stackcopy()
       stack = tablecopy(startstack)
+      backendnames = tablecopy(startbackends)
       local truebody = table.concat(curbody, "")
       curbody = {}
       if blocks.n == 1 then

@@ -144,6 +144,7 @@
 '#idx default-#integral unit '#latin1-char default-#integral unit
 '#B default-#integral unit
 '#level default-#integral unit
+'#aliases default-#integral unit
 
 '_#idx_#idx_> {
   '#float8 1 #idx unsafe-set-type-at
@@ -325,6 +326,7 @@
 '#B derive-to-quote
 '#level '#bc derive-numeric
 '#level derive-to-quote
+'#aliases '#bc derive-numeric
 
 '#B '#idx '#bc '#float8 derive-binary-ratios
 '#B*#idx derive-to-quote '#B/#idx derive-to-quote '#idx/#B derive-to-quote

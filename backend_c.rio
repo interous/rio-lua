@@ -194,6 +194,15 @@
 'inc { dup eval 1 idx + swap rebind } inline
 'dec { dup eval 1 idx - swap rebind } inline
 
+'require-mutable {
+  { mutable? not }
+  { "attempted to mutate an immutable reference" compile-error } if2
+} macro
+
+'make-immutable {
+  #false set-mutability drop
+} macro
+
 [ The following DU-support algorithms are all linear or quadratic, when they
   could be logarithmic or n*log(n), because the expectation is for DUs to
   enumerate a small number of types. Given this, the actual performance should
@@ -252,8 +261,9 @@
     ^types datum type-of find-quote-in-block !pos
     { pos 0 #idx < }
     { datum type-of " is not a member of " ^type ++ ++ compile-error } if2
+    datum make-immutable
 
-    '__du get-anonymous-name !name
+    ^type get-anonymous-name !name
     "#include <stdlib.h>" backend-include
     "struct __du* " name '; ++ ++ backend-declare
     name " = malloc(sizeof(struct __du));" ++ backend-code
@@ -265,7 +275,28 @@
     { name "->blob = (void*)(size_t)" datum to-quote '; ++ ++ ++ backend-code }
     { name "->blob = (void*)" datum to-quote '; ++ ++ ++ backend-code }
     if
-    name ^type unsafe-set-type
+    name ^type unsafe-set-type name add-alias
+  } inject macro
+
+  '_ type '_set-inner ++ ++ {
+    !container !datum
+    ^types datum type-of find-quote-in-block !pos
+    { pos 0 #idx < }
+    { datum type-of " is not a member of " ^type ++ ++ compile-error } if2
+
+    container require-mutable
+    datum make-immutable
+
+    container to-quote "->type_id = " pos to-quote '; ++ ++ ++ backend-code
+    fi
+    { datum type-of 'empty = }
+    { "// a DU is being \"assigned\" an empty type here" backend-code }
+    { datum size-of pointer-size /= }
+    { container to-quote "->blob = (void*)(size_t)" datum to-quote '; ++ ++ ++ backend-code }
+    { container to-quote "->blob = (void*)" datum to-quote '; ++ ++ ++ backend-code }
+    if
+
+    container purge-aliases
   } inject macro
 
   '_ type '_match ++ ++ {
@@ -334,6 +365,34 @@
     if
   } inject macro
 
+  '_ type '_delete ++ ++ {
+    !data !name
+    { data mutable-alias-count 2 #aliases = }
+    { data
+      0 #idx !c
+      { 0 #idx !i } { i ^types len < } { 'i #inc }
+      { ^types i at !cur
+        { '_ cur '_delete ++ ++ defined? }
+        { cur
+          {} '_ cur '_delete ++ ++ block-push 'eval block-push-as-symbol
+          'c #inc
+        } if2
+      } for
+
+      fi
+      { c ^types len = }
+      { match }
+      { c 0 #idx > }
+      { {} match }
+      { raw-drop }
+      if
+
+      name free-anonymous-name
+      'free( data to-quote '); ++ ++ backend-code
+    } if2
+    'data raw-delete
+  } inject macro
+
   '_ type '_to-quote ++ ++ { '__quote unsafe-set-type } inject macro
 } macro
 
@@ -351,18 +410,28 @@
   } while
 } macro
 
+'set-inner 1 #idx poly
+
 'maybe {
   !type
   type '? ++ { ^type 'empty } inject du
 
-  '_ type '_just-default ++ ++ {
+  '_ type '?___block___block_just ++ ++ {
+    !empty-case !filled-case
+    'empty empty-case
+    ^type filled-case
+    match
+  } inject macro
+
+  '_ type '?_ type '_just-default ++ ++ ++ ++ {
     {} swap block-push 'empty swap
     ^type {}
     match
   } inject macro
 } macro
 
-'just-default 1 #idx poly
+'just 3 #idx poly
+'just-default 2 #idx poly
 
 'list {
   !inner !outer

@@ -315,7 +315,7 @@ function rio_commitstackentry(i)
   if not rio_commitable(stack[i].ty) then notcommtiable(stack[i].ty) end
   rio_eval(rio_getsymbol(stack[i].ty .. "->repr"))
   local repr = rio_pop("__quote").data
-  local name = "__stack" .. tostring(i) .. "_" .. repr
+  local name = "__stack" .. tostring(i - 1) .. "_" .. repr
   if not declarationtable[name] then
     rio_push(rio_strtoquote(name))
     rio_eval(rio_getsymbol("_" .. stack[i].ty .. "_declare"))

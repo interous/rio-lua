@@ -9,7 +9,10 @@ end)
 
 rio_addcore("backend-declare", function(self)
   local decl = rio_pop("__quote").data
-  table.insert(curdecls, indent_level .. decl .. "\n")
+  if not declarationtable[decl] then
+    table.insert(curdecls, indent_step .. decl .. "\n")
+    declarationtable[decl] = true
+  end
 end)
 
 rio_addcore("backend-header", function(self)
@@ -287,6 +290,33 @@ rio_addcore("alias-of?", function(self)
   local datum = rio_pop()
   rio_push({ ty="#bc", data=datum.aliases[name] ~= nil, aliases={}, mut=true,
     eval=function(self) rio_push(self) end })
+end)
+
+rio_addcore("mutable-alias-count", function(self)
+  local datum = rio_pop()
+  local res = 0
+  for t in pairs(datum.aliases) do
+    for i = 1, stack.n do
+      if stack[i].mut and stack[i].aliases[t] then res = res + 1 end
+    end
+    for _,v in pairs(bindingtable) do
+      if v.mut and v.aliases[t] then res = res + 1 end
+    end
+  end
+  rio_push({ ty="#aliases", data=res, aliases={}, mut=true,
+    eval=function(self) rio_push(self) end })
+end)
+
+rio_addcore("purge-aliases", function(self)
+  local lastman = rio_peek()
+  for t in pairs(lastman.aliases) do
+    for i = 1, stack.n - 1 do
+      if stack[i].aliases[t] then purgealiasonstack(t) end
+    end
+    for k,v in pairs(bindingtable) do
+      if v.aliases[t] then rio_deletebinding(k, true) end
+    end
+  end
 end)
 
 rio_addcore("set-mutability", function(self)

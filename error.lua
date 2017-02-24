@@ -96,6 +96,12 @@ function stardeleteoutofscope(name)
   os.exit(-1)
 end
 
+function purgealiasonstack(name)
+  print("PURGE_ALIAS_ON_STACK " .. name)
+  stacktrace()
+  os.exit(-1)
+end
+
 function notcommtiable(name)
   print("NOT_COMMITABLE " .. name)
   print("commitable requires _" .. name .. "_declare, _" .. name ..
