@@ -280,8 +280,8 @@ function rio_stackeq(a, b)
 end
 
 function rio_makestackbindings(startstack)
-  bindings = {}
-  mangles = {}
+  local bindings = {}
+  local mangles = {}
   for i = stack.n, 1, -1 do
     if rio_commitable(stack[i].ty) and (not startstack[i] or
         stack[i].ty ~= startstack[i].ty or
@@ -311,28 +311,25 @@ function rio_validatestack(startstack)
   end
 end
 
-function rio_commitstackentry(i, name)
+function rio_commitstackentry(i)
   if not rio_commitable(stack[i].ty) then notcommtiable(stack[i].ty) end
-  if not name then
-    rio_eval(rio_getsymbol(stack[i].ty .. "->repr"))
-    local repr = rio_pop("__quote").data
-    local mangle = 0
-    local base_name = "__stack__" .. rio_sanitize(repr)
-    name = base_name .. mangle
-    while rio_nameinuse(name) do
-      mangle = mangle + 1
-      name = base_name .. mangle
-    end
+  rio_eval(rio_getsymbol(stack[i].ty .. "->repr"))
+  local repr = rio_pop("__quote").data
+  local name = "__stack" .. tostring(i) .. "_" .. repr
+  if not declarationtable[name] then
+    rio_push(rio_strtoquote(name))
+    rio_eval(rio_getsymbol("_" .. stack[i].ty .. "_declare"))
+    declarationtable[name] = true
   end
-  rio_commit(name, stack[i], true)
-  stack[i] = rio_getsymbol(name)
+  rio_push(rio_strtoquote(name))
+  rio_push(stack[i])
+  rio_eval(rio_getsymbol("_" .. stack[i].ty .. "_commit"))
+  stack[i].data = name
 end
 
-function rio_commitstack(bindings, startstack)
-  for k,v in pairs(bindings) do
-    if not stack[k] then stackmismatch(startstack, stack) end
-    if stack[k].ty ~= v.val.ty then stackmismatch(startstack, stack) end
-    rio_commitstackentry(k, v.name)
+function rio_commitstack()
+  for i = 1, stack.n do
+    if rio_commitable(stack[i].ty) then rio_commitstackentry(i) end
   end
 end
 

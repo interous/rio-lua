@@ -283,8 +283,11 @@
         { type-id 0 #idx < }
         { cur-type " is not a member of " ^type ++ ++ compile-error } if2
 
-        {} type-id #idx->idx block-push
-        { union to-quote '->type_id ++ quote->idx = } ++
+        { i data len 2 #idx - < }
+        { {} type-id #idx->idx block-push
+          { union to-quote '->type_id ++ quote->idx = } ++
+        } if2
+
         { cur-type 'empty = }
         { cur-block }
         { {} cur-type block-push
@@ -347,6 +350,19 @@
     } if3
   } while
 } macro
+
+'maybe {
+  !type
+  type '? ++ { ^type 'empty } inject du
+
+  '_ type '_just-default ++ ++ {
+    {} swap block-push 'empty swap
+    ^type {}
+    match
+  } inject macro
+} macro
+
+'just-default 1 #idx poly
 
 'list {
   !inner !outer

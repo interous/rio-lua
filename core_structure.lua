@@ -75,29 +75,28 @@ rio_addcore("if", function(self)
       indent_level = indent_level .. indent_step
       if not startstack then startstack = rio_stackcopy() end
       if not startbindings then startbindings = rio_bindingtablecopy() end
-      rio_collapsebindings(startbindings)
       rio_invokewithtrace(listpop(blocks))
-      if not bindings then
-        bindings = rio_makestackbindings(startstack)
-      end
-      rio_commitstack(bindings, stack)
+      rio_commitstack()
       rio_collapsebindings(startbindings)
-      stack = tablecopy(startstack)
       local truestack = rio_stackcopy()
+      stack = tablecopy(startstack)
       local truebody = table.concat(curbody, "")
       curbody = {}
       if blocks.n == 1 then
         rio_invokewithtrace(listpop(blocks))
-        rio_commitstack(bindings, truestack)
+        rio_commitstack()
+        rio_validatestack(truestack)
       elseif blocks.n > 1 then
         local bound_elsewhere = f(blocks)
         if not bound_elsewhere then
-          rio_commitstack(bindings, truestack)
+          rio_commitstack()
+          rio_validatestack(truestack)
         end
       else
-        rio_commitstack(bindings, truestack)
+        rio_commitstack()
+        rio_validatestack(truestack)
       end
-      rio_validatestack(truestack, stack)
+      rio_collapsebindings(startbindings)
       local falsebody = table.concat(curbody, "")
       curbody = outerbody
       indent_level = cur_indent
@@ -132,10 +131,9 @@ rio_addcore("while", function(self)
       rio_getsymbol("while"):eval()
     end
   elseif decision_types[condition.ty] == "A" then
-    local bindings = rio_makestackbindings(stack)
     local headcode = table.concat(curbody, "")
-    rio_commitstack(bindings, startstack)
-    rio_validatestack(startstack, stack)
+    rio_commitstack()
+    rio_validatestack(startstack)
     curbody = {}
     rio_collapsebindings(startbindings)
     stack = rio_stackcopy(startstack)
@@ -143,11 +141,10 @@ rio_addcore("while", function(self)
     indent_level = indent_level .. indent_step
     rio_invokewithtrace(body)
     indent_level = cur_indent
-    rio_commitstack(bindings, startstack)
-    rio_validatestack(startstack, stack)
+    rio_commitstack()
+    rio_validatestack(startstack)
     rio_collapsebindings(startbindings)
     local bodycode = table.concat(curbody, "")
-    stack = rio_stackcopy(startstack)
     curbody = outerbody
     rio_push(rio_strtoquote(headcode))
     rio_push(condition)
