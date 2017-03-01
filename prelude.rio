@@ -54,6 +54,9 @@
 '$ { '* swap ++ bind } prefix
 '& { require-type } prefix
 '^ { "^ is reserved for injection" compile-error } prefix
+'!! { dup '* swap ++ eval swap bind } prefix
+'@@ { dup '* swap ++ eval swap commit } prefix
+'$$ { dup eval swap '* swap ++ bind } prefix
 
 'rebind {
   dup delete bind
@@ -84,7 +87,7 @@
   { defined? not }
   { bind }
   { drop drop }
-  if
+  if3
 } inline
 
 [ inject macro is the preferred way of doing things like this, but inject is
@@ -190,7 +193,9 @@
 'and 2 #idx poly 'or 2 #idx poly 'not 1 #idx poly
 '++ 2 #idx poly
 'repr-of 1 #idx poly 'base-type-of 1 #idx poly 'to-quote 1 #idx poly
-'at 2 #idx poly 'len 1 #idx poly 'capacity 1 #idx poly
+'at 4 #idx poly 'len 1 #idx poly 'capacity 1 #idx poly
+'#at 2 #idx poly
+'push 2 #idx poly
 'slice 3 #idx poly
 
 'derive {
@@ -336,8 +341,8 @@
 '#true { 1 #bc } macro
 '#false { 0 #bc } macro
 
-'head { 0 #idx at } macro
-'tail { 1 #idx -1 #idx slice } macro
+'#head { 0 #idx #at } macro
+'#tail { 1 #idx -1 #idx slice } macro
 
 'if2 { fi 2 #idx lift 2 #idx lift if } inline
 'if3 { fi 3 #idx lift 3 #idx lift 3 #idx lift if } inline
@@ -350,9 +355,9 @@
   { 0 #idx !i } { i data len < } { 'i #inc }
   { fi
     { data i type-in-block '__symbol = }
-    { data i at-as-quote !cur
-      { cur head '^ quote->char = }
-      { bp cur tail ++ !rest
+    { data i #at-as-quote !cur
+      { cur #head '^ quote->char = }
+      { bp cur #tail ++ !rest
         { rest fqn-defined? not }
         { "UNKNOWN_SYMBOL_IN_INJECTION " rest ++ compile-error }
         if2
@@ -362,8 +367,8 @@
       if3
     }
     { data i type-in-block '__block = }
-    { res data i at bp _inject block-push :res }
-    { res data i at block-push :res }
+    { res data i #at bp _inject block-push :res }
+    { res data i #at block-push :res }
     if
   } for
   res

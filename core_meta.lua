@@ -48,7 +48,10 @@ end)
 rio_addcore("___quote___quote_++", function(self)
   local b = rio_pop("__quote")
   local a = rio_pop("__quote")
-  rio_push(rio_strtoquote(a.data .. b.data))
+  local res = rio_strtoquote(a.data .. b.data)
+  for k in pairs(a.aliases) do res.aliases[k] = true end
+  for k in pairs(b.aliases) do res.aliases[k] = true end
+  rio_push(res)
 end)
 
 rio_addcore("___quote___quote_=", function(self)
@@ -84,7 +87,7 @@ rio_addcore("___quote_len", function(self)
     eval=function(self) rio_push(self) end })
 end)
 
-rio_addcore("___quote_#idx_at", function(self)
+rio_addcore("___quote_#idx_#at", function(self)
   local idx = rio_pop("#idx").data + 1
   local quote = rio_pop("__quote").data
   if idx < 0 or idx > quote:len() then outofquotebounds(quote, idx) end
@@ -111,14 +114,14 @@ rio_addcore("block-push-as-symbol", function(self)
   listpush(rio_peek("__block").data, rio_strtosymbol(elem))
 end)
 
-rio_addcore("___block_#idx_at", function(self)
+rio_addcore("___block_#idx_#at", function(self)
   local idx = rio_pop("#idx").data + 1
   local block = rio_pop("__block").data
   if idx < 0 or idx > block.n then outofblockbounds(block.n, idx) end
   rio_eval(block[idx])
 end)
 
-rio_addcore("at-as-quote", function(self)
+rio_addcore("#at-as-quote", function(self)
   local idx = rio_pop("#idx").data + 1
   local block = rio_pop("__block").data
   if idx < 0 or idx > block.n then outofblockbounds(block.n, idx) end
@@ -319,9 +322,25 @@ rio_addcore("purge-aliases", function(self)
   end
 end)
 
+rio_addcore("set-batch-mutability", function(self)
+  local val = rio_pop("#bc").data
+  local ref = rio_pop()
+  for t in pairs(ref.aliases) do
+    for i = 1, stack.n - 1 do
+      if stack[i].aliases[t] and rio_commitable(stack[i].ty) then
+        stack[i].mut = val
+      end
+    end
+    for k,v in pairs(bindingtable) do
+      if v.aliases[t] and rio_commitable(v.ty) then v.mut = val end
+    end
+  end
+end)
+
 rio_addcore("set-mutability", function(self)
   local val = rio_pop("#bc").data
-  rio_peek().mut = val
+  local datum = rio_peek()
+  if rio_commitable(datum.ty) then datum.mut = val end
 end)
 
 rio_addcore("mutable?", function(self)
@@ -332,21 +351,7 @@ end)
 
 rio_addcore("get-anonymous-name", function(self)
   local ty = rio_sanitize(rio_pop("__quote").data)
-  local i = 0
-  while true do
-    local name = "__anonymous" .. tostring(i) .. "_" .. ty
-    if(not backendnames[name]) then
-      backendnames[name] = true
-      rio_push(rio_strtoquote(name))
-      break
-    end
-    i = i + 1
-  end
-end)
-
-rio_addcore("free-anonymous-name", function(self)
-  local name = rio_pop("__quote").data
-  backendnames[name] = nil
+  rio_push(rio_strtoquote(rio_getname(ty)))
 end)
 
 rio_addcore("top-level?", function(self)

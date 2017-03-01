@@ -19,10 +19,10 @@
 'check-rational {
   !lit 0 #idx !i
   #false !found-dot
-  { lit i at '- quote->char = } { 'i #inc } if
+  { lit i #at '- quote->char = } { 'i #inc } if
 
   { } { i lit len < } { 'i #inc }
-  { lit i at !cur
+  { lit i #at !cur
     { cur '. quote->char = found-dot and }
     { "Failed to parse " lit " as rational (found two dots)" ++ ++
       compile-error
@@ -37,10 +37,10 @@
 
 'check-integral {
   !lit 0 #idx !i
-  { lit i at '- quote->char = } { 'i #inc } if
+  { lit i #at '- quote->char = } { 'i #inc } if
 
   { } { i lit len < } { 'i #inc }
-  { lit i at !cur
+  { lit i #at !cur
     { cur '0 quote->char < cur '9 quote->char > or }
     { "Failed to parse " lit " as integral: " cur char->quote " not a digit"
       ++ ++ ++ ++ compile-error
@@ -76,35 +76,48 @@
   preface '+ ++ {
     !b !a
     '( a to-quote " + " b to-quote ') ++ ++ ++ ++
-    b merge-aliases a merge-aliases
     'quote-> ^type ++ eval
   } inject macro
 
   preface '* ++ {
     !b !a
     '( a to-quote " * " b to-quote ') ++ ++ ++ ++
-    b merge-aliases a merge-aliases
     'quote-> ^type ++ eval
   } inject macro
 
   preface '< ++ {
     !b !a
     '( a to-quote " < " b to-quote ') ++ ++ ++ ++
-    b merge-aliases a merge-aliases
+    'quote-> ^type ++ eval
+  } inject macro
+
+  preface '<= ++ {
+    !b !a
+    '( a to-quote " <= " b to-quote ') ++ ++ ++ ++
+    'quote-> ^type ++ eval
+  } inject macro
+
+  preface '> ++ {
+    !b !a
+    '( a to-quote " >= " b to-quote ') ++ ++ ++ ++
+    'quote-> ^type ++ eval
+  } inject macro
+
+  preface '>= ++ {
+    !b !a
+    '( a to-quote " >= " b to-quote ') ++ ++ ++ ++
     'quote-> ^type ++ eval
   } inject macro
 
   preface '= ++ {
     !b !a
     '( a to-quote " == " b to-quote ') ++ ++ ++ ++
-    b merge-aliases a merge-aliases
     'quote-> ^type ++ eval
   } inject macro
 
   preface '/= ++ {
     !b !a
     '( a to-quote " != " b to-quote ') ++ ++ ++ ++
-    b merge-aliases a merge-aliases
     'quote-> ^type ++ eval
   } inject macro
 } macro
@@ -145,35 +158,30 @@
   preface 'and ++ {
     !b !a
     '( a to-quote " && " b to-quote ') ++ ++ ++ ++
-    b merge-aliases a merge-aliases
     'quote-> ^type ++ eval
   } inject macro
 
   preface 'or ++ {
     !b !a
     '( a to-quote " || " b to-quote ') ++ ++ ++ ++
-    b merge-aliases a merge-aliases
     'quote-> ^type ++ eval
   } inject macro
 
   preface 'not ++ {
     !a
     '!( swap to-quote ') ++ ++
-    a merge-aliases
     'quote-> ^type ++ eval
   } inject macro
 
   preface '= ++ {
     !b !a
     '( a to-quote " == " b to-quote ') ++ ++ ++ ++
-    b merge-aliases a merge-aliases
     'quote-> ^type ++ eval
   } inject macro
 
   preface '/= ++ {
     !b !a
     '( a to-quote " != " b to-quote ') ++ ++ ++ ++
-    b merge-aliases a merge-aliases
     'quote-> ^type ++ eval
   } inject macro
 } macro
@@ -191,16 +199,32 @@
 'idx derive-realization
 'B 'idx derive-binary-realizations
 
-'inc { dup eval 1 idx + swap rebind } inline
-'dec { dup eval 1 idx - swap rebind } inline
+'inc { dup eval 1 idx + swap recommit } inline
+'dec { dup eval 1 idx - swap recommit } inline
 
-'require-mutable {
-  { mutable? not }
-  { "attempted to mutate an immutable reference" compile-error } if2
+[ "Soft" mutability means either that a type defines a commit macro (i.e., it's
+  a value type) or that it's immutable. Mutability is undefined for value types,
+  since evaluate is always copy, so by convention they're always marked mutable.
+  Thus, there is no make-soft-mutable.
+]
+
+'require-soft-mutable {
+  !datum
+  { '_ datum type-of '_commit ++ ++ defined? datum mutable? or not }
+  { "attempted to mutate an immutable reference" compile-error }
+  if2
+} macro
+
+'make-mutable {
+  #true set-mutability
 } macro
 
 'make-immutable {
-  #false set-mutability drop
+  #false set-mutability
+} macro
+
+'batch-make-immutable {
+  #false set-batch-mutability
 } macro
 
 [ The following DU-support algorithms are all linear or quadratic, when they
@@ -213,7 +237,7 @@
   !quote !block
   { -1 #idx !res 0 #idx !i } { i block len < res 0 #idx < and } { 'i #inc }
   { { block i type-in-block '__quote = }
-    { { block i at quote = }
+    { { block i #at quote = }
       { i :res } if2
     } if2
   } for
@@ -229,9 +253,9 @@
 
   { 0 #idx :i } { i block len < } { 'i #inc }
   { { i 1 #idx + !j } { j block len < } { 'j #inc }
-    { { block i at block j at = }
+    { { block i #at block j #at = }
       { "block must contain all unique entries, found duplication of "
-        block i at ++ compile-error
+        block i #at ++ compile-error
       } if2
     } for
   } for
@@ -243,8 +267,8 @@
   require-all-unique-quotes !types !type
 
   { 0 #idx !i } { i types len < } { 'i #inc }
-  { { types i at is-type? not }
-    { types i at " is not a type" ++ compile-error
+  { { types i #at is-type? not }
+    { types i #at " is not a type" ++ compile-error
     } if2
   } for
 
@@ -284,7 +308,7 @@
     { pos 0 #idx < }
     { datum type-of " is not a member of " ^type ++ ++ compile-error } if2
 
-    container require-mutable
+    container require-soft-mutable
     datum make-immutable
 
     container to-quote "->type_id = " pos to-quote '; ++ ++ ++ backend-code
@@ -308,8 +332,8 @@
     { ^types len 2 #idx * depth = }
     { fi
       { 0 #idx :i } { i data len < } { i 2 #idx + :i }
-      { data i at !cur-type
-        data i 1 #idx + at !cur-block
+      { data i #at !cur-type
+        data i 1 #idx + #at !cur-block
         ^types cur-type find-quote-in-block !type-id
         { type-id 0 #idx < }
         { cur-type " is not a member of " ^type ++ ++ compile-error } if2
@@ -339,8 +363,8 @@
       } if2
       fi
       { 0 #idx :i } { i data len 1 #idx - < } { i 2 #idx + :i }
-      { data i at !cur-type
-        data i 1 #idx + at !cur-block
+      { data i #at !cur-type
+        data i 1 #idx + #at !cur-block
         ^types cur-type find-quote-in-block !type-id
         { type-id 0 #idx < }
         { cur-type " is not a member of " ^type ++ ++ compile-error } if2
@@ -358,7 +382,7 @@
           } cur-block ++ ++
         } if3
       } for
-      { union } data data len 1 #idx - at ++
+      { union } data data len 1 #idx - #at ++
       if
     }
     { "attempting to match more types than the DU enumerates" compile-error }
@@ -371,7 +395,7 @@
     { data
       0 #idx !c
       { 0 #idx !i } { i ^types len < } { 'i #inc }
-      { ^types i at !cur
+      { ^types i #at !cur
         { '_ cur '_delete ++ ++ defined? }
         { cur
           {} '_ cur '_delete ++ ++ block-push 'eval block-push-as-symbol
@@ -387,7 +411,6 @@
       { raw-drop }
       if
 
-      data to-quote free-anonymous-name
       'free( data to-quote '); ++ ++ backend-code
     } if2
     'data raw-delete
@@ -403,7 +426,7 @@
   { !atom
     { atom type-of '__quote = atom type-of '__block = or }
     { data atom block-push :data }
-    { { 0 #idx !i } { i data len < } { 'i #inc } { data i at } for
+    { { 0 #idx !i } { i data len < } { 'i #inc } { data i #at } for
       data len atom '_ atom type-of '_match ++ ++ eval
       #true :done
     } if3
@@ -437,21 +460,25 @@
   !inner !outer
   outer add-type
   inner '->repr ++ eval !inner-repr
-  inner '->size ++ eval #B->B !inner-size
+  inner '->size ++ eval !inner-size-E
+  inner-size-E #B->B !inner-size
   2 #idx pointer-size * #B*#idx->B*idx !header-size
+  2 #idx pointer-size * inner-size-E / #idx->idx !header-offset
 
   [2 #B pointer-size * inner-size / !header-size]
 
+  { inner '? ++ defined? not } { inner maybe } if2
+
   outer {
-    16 idx '*sz default
-    *sz ^inner-size * ^header-size + !actual-size
-    get-anonymous-name !name
+    16 idx '*sz default !!sz
+    sz ^inner-size * ^header-size + !actual-size
+    ^inner-repr '* ++ get-anonymous-name !name
     ^inner-repr "* " name '; ++ ++ ++ backend-declare
     name " = malloc(" actual-size to-quote ");" ++ ++ ++ backend-code
     "#include <stdlib.h>" backend-include
     '((size_t*) name ")[0] = 0;" ++ ++ backend-code
-    '((size_t*) name ")[1] = " *sz to-quote '; ++ ++ ++ ++ backend-code
-    name ^outer unsafe-set-type
+    '((size_t*) name ")[1] = " sz to-quote '; ++ ++ ++ ++ backend-code
+    name ^outer unsafe-set-type name add-alias
   } inject macro
 
   '_ outer '_len ++ ++ {
@@ -463,6 +490,31 @@
     to-quote !name
     '((size_t*) name ")[1]" ++ ++ quote->idx
   } macro
+
+  '_ outer '_idx___block___block_at ++ ++ {
+    !false-block !true-block !i !bag
+    { i 0 idx >= i bag len < and }
+    { bag to-quote '[ ^header-offset i + to-quote '] ++ ++ ++
+      ^inner unsafe-set-type
+      make-immutable
+      true-block flatten
+    }
+    false-block
+    if3
+  } inject macro
+
+  '_ outer '_ inner '_push ++ ++ ++ ++ {
+    !e !bag
+    { bag len bag capacity = }
+    { bag capacity bag capacity + ^inner-size * ^header-size + !new-size
+      bag to-quote " = realloc(" bag to-quote ", " new-size to-quote '); ++ ++ ++ ++ ++ backend-code
+      '((size_t*) bag to-quote ")[1] = " bag capacity bag capacity + to-quote '; ++ ++ ++ ++ backend-code
+    } if2
+    bag to-quote '[ ^header-offset bag len + to-quote "] = " e to-quote '; ++ ++ ++ ++ ++ backend-code
+    '((size_t*) bag to-quote ")[0]++;" ++ ++ backend-code
+
+    bag purge-aliases
+  } inject macro
 
   outer '->repr ++ { ^inner-repr '* ++ } inject macro
   outer '->quote ++ { '__quote unsafe-set-type } macro
@@ -485,9 +537,9 @@
 } macro
 
 'backend-while {
-  !body !condition !head
+  !body !condition !header
   "while(1) {" backend-code
-  head backend-raw-code
+  header backend-raw-code
   "if(!(" condition to-quote ")) break;" ++ ++ backend-code
   body backend-raw-code
   "}" backend-code

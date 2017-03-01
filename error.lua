@@ -135,7 +135,7 @@ function badliteral(s, ty)
 end
 
 function invalidprefix(name)
-  print("INVALID_PREFIX " .. name .. " (must be exactly one character)")
+  print("INVALID_PREFIX " .. name .. " (must be one or two characters)")
   stacktrace()
   os.exit(-1)
 end

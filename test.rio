@@ -9,7 +9,6 @@
 
 'A 'bool derive-simply-numeric
 
-'A maybe
 'X maybe
 
 ['_A_delete { !data !name "deleting " name " which is bound to " data to-quote ++ ++ ++ #print 'data raw-delete } macro]
@@ -23,13 +22,16 @@
   { val base-type-of 'int4 = }
   { "printf(\"%d\\n\", " val to-quote ");" ++ ++ backend-code }
   { val base-type-of 'pointer = }
-  { "printf(\"%p\\n\", " val to-quote ");" ++ ++ backend-code }
+  { "printf(\"%lu\\n\", " val to-quote ");" ++ ++ backend-code }
   if
 } write
 
-{ { 0 bool } { 10 A A? } { empty A? } if3
-  { "found an A:" print print } { "found nothing" print } just
+{ A-list !bag
+  { 0 idx @i } { i 20 idx < } { 'i inc }
+  { bag i 'A unsafe-set-type push !bag
+  } for
 
-  { 1 bool } { 10 A A? } { empty A? } if3
-  { "found an A:" print print } { "found nothing" print } just
+  { 0 idx ;i } { i 25 idx < } { 'i inc }
+  { bag i { print } { "no data" print } at
+  } for
 } finalize

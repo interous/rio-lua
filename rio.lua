@@ -189,7 +189,6 @@ declarationtable = {}
 symboltable = {}
 bindingtable = {}
 startable = {}
-backendnames = {}
 prefixtable = {}
 prefixtable["'"] = { eval=function(self) end }
 toplevel = true
@@ -394,19 +393,29 @@ function rio_addbinding(name, val, noprefix)
   bindingtable[name] = val
 end
 
+function rio_getname(ty)
+  local offset = 0
+  local anonymousnames = {}
+  for i = 1, stack.n do
+    for k in pairs(stack[i].aliases) do anonymousnames[k] = true end
+  end
+  for _,v in pairs(bindingtable) do
+    for k in pairs(v.aliases) do anonymousnames[k] = true end
+  end
+  while true do
+    local name = "__anon" .. tostring(offset) .. "_" .. ty
+    if(not anonymousnames[name]) then
+      return name
+    end
+    offset = offset + 1
+  end
+end
+
 function rio_commit(name, val, raw, noprefix)
   if rio_commitable(val.ty) then
     rio_eval(rio_getsymbol(val.ty .. "->repr"))
     local repr = rio_pop("__quote").data
-    local backend_name = ""
-    if not noprefix and name:sub(1, 1) ~= '*' then
-      backend_name = binding_prefix
-    end
-    if raw then
-      backend_name = backend_name .. name .. "__" .. rio_sanitize(repr)
-    else
-      backend_name = backend_name .. rio_sanitize(name) .. "__" .. rio_sanitize(repr)
-    end
+    local backend_name = rio_getname(repr)
     if not declarationtable[name] then
       rio_push(rio_strtoquote(backend_name))
       rio_eval(rio_getsymbol("_" .. val.ty .. "_declare"))
@@ -531,9 +540,15 @@ function rio_eval(blob)
     rio_eval(rio_getsymbol("backend-finalize"))
     fd:write(rio_pop("__quote").data)
     fd:close()
+  elseif blob.ty == "__symbol" and blob.data:len() > 2 and prefixtable[blob.data:sub(1, 2)] then
+    rio_push(rio_strtoquote(blob.data:sub(3, -1)))
+    prefixtable[blob.data:sub(1, 2)]:eval()
   elseif blob.ty == "__symbol" and blob.data:len() > 1 and prefixtable[blob.data:sub(1, 1)] then
     rio_push(rio_strtoquote(blob.data:sub(2, -1)))
     prefixtable[blob.data:sub(1, 1)]:eval()
+  elseif blob.ty == "__symbol" and blob.data:len() > 1 and blob.data:sub(1, 1) == "*" then
+    rio_push(rio_getsymbol(blob.data))
+    rio_deletebinding(blob.data)
   else
     blob:eval()
   end
