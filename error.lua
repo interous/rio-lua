@@ -152,6 +152,12 @@ function iftooshort(n)
   os.exit(-1)
 end
 
+function stacknotempty()
+  print("STACK_NOT_EMPTY")
+  stacktrace()
+  os.exit(-1)
+end
+
 function stackmismatch(a, b)
   print("STACK_MISMATCH")
   print("first stack:")

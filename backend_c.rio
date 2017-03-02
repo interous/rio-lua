@@ -285,7 +285,8 @@
     ^types datum type-of find-quote-in-block !pos
     { pos 0 #idx < }
     { datum type-of " is not a member of " ^type ++ ++ compile-error } if2
-    datum make-immutable
+    datum require-soft-mutable
+    datum batch-make-immutable
 
     ^type get-anonymous-name !name
     "#include <stdlib.h>" backend-include
@@ -309,7 +310,8 @@
     { datum type-of " is not a member of " ^type ++ ++ compile-error } if2
 
     container require-soft-mutable
-    datum make-immutable
+    datum require-soft-mutable
+    datum make-batch-immutable
 
     container to-quote "->type_id = " pos to-quote '; ++ ++ ++ backend-code
     fi
@@ -350,7 +352,7 @@
             { cur-type '->size ++ eval pointer-size /= }
             { ')(size_t ++ } if2
             ') union to-quote '->blob) ++ ++ ++ ++
-            cur-type unsafe-set-type
+            cur-type unsafe-set-type make-immutable
           } cur-block ++ ++
         } if3
       } for
@@ -378,7 +380,7 @@
             { cur-type '->size ++ eval pointer-size /= }
             { ')(size_t ++ } if2
             ') union to-quote '->blob) ++ ++ ++ ++
-            cur-type unsafe-set-type
+            cur-type unsafe-set-type make-immutable
           } cur-block ++ ++
         } if3
       } for
@@ -514,6 +516,20 @@
     '((size_t*) bag to-quote ")[0]++;" ++ ++ backend-code
 
     bag purge-aliases
+  } inject macro
+
+  '_ outer '_delete ++ ++ {
+    !data !name
+    { data mutable-alias-count 2 #aliases = }
+    { { '_ ^inner '_delete ++ ++ defined? }
+      { { 0 idx @i } { i data len < } { 'i inc }
+        { data i { '_ ^inner '_delete ++ ++ eval } {} at }
+        for
+      } if2
+
+      'free( data to-quote '); ++ ++ backend-code
+    } if2
+    'data raw-delete
   } inject macro
 
   outer '->repr ++ { ^inner-repr '* ++ } inject macro

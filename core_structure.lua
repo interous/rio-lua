@@ -161,6 +161,8 @@ rio_addcore("finalize", function(self)
   if not toplevel then mustbetoplevel() end
   toplevel = false
   rio_invokewithtrace(body)
+  if stack.n > 0 then stacknotempty() end
+  for k in pairs(bindingtable) do rio_deletebinding(k, true) end
   toplevel = true
   binding_prefix = old_prefix
   finalize_decls = table.concat(curdecls, "")
